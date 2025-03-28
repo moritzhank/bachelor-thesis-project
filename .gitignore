@@ -1,0 +1,12 @@
+.gradle
+build
+.idea
+.kotlin
+smtSolverSettings.json
+dataSettings.json
+carlaSettings.json
+/_smtTmp
+/_formulaSvgs
+/_treeSvgs
+/_experiment
+**/src/main/resources/scripts/.vscode/
