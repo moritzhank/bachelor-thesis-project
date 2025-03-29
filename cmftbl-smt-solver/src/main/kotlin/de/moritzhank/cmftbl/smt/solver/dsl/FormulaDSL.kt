@@ -4,6 +4,7 @@ package de.moritzhank.cmftbl.smt.solver.dsl
 
 import kotlin.reflect.KCallable
 import tools.aqua.stars.core.types.*
+import kotlin.reflect.KClass
 
 class FormulaBuilder(
     allowedCCBs: List<CallContextBase<*>>,
@@ -168,7 +169,7 @@ class FormulaBuilder(
     return PastMaxPrevalence(interval, fraction, phi[0])
   }
 
-  private fun <Type> buildBinding(ccb: CallContextBase<Type>, term: Term<Type>): Binding<Type> {
+  private fun <Type : Any> buildBinding(ccb: CallContextBase<Type>, term: Term<Type>): Binding<Type> {
     assert(phi.size == 1)
     return Binding(ccb, term, phi[0])
   }
@@ -294,31 +295,57 @@ class FormulaBuilder(
     return deriveFormulaBuilder().apply(init).buildUntil(interval).also { phi.add(it) }
   }
 
-  fun <
-      E1 : E,
+  inline fun <
+      reified E1 : E,
       E : EntityType<E, T, S, U, D>,
       T : TickDataType<E, T, S, U, D>,
       S : SegmentType<E, T, S, U, D>,
       U : TickUnit<U, D>,
       D : TickDifference<D>> FormulaBuilder.forall(
-      init: FormulaBuilder.(CallContextBase<E1>) -> Unit = {}
+      noinline init: FormulaBuilder.(CallContextBase<E1>) -> Unit = {}
   ): Forall<E1> {
-    val ccb = CallContextBase<E1>()
+    return forall(E1::class, init)
+  }
+
+  fun <
+    E1 : E,
+    E : EntityType<E, T, S, U, D>,
+    T : TickDataType<E, T, S, U, D>,
+    S : SegmentType<E, T, S, U, D>,
+    U : TickUnit<U, D>,
+    D : TickDifference<D>> FormulaBuilder.forall(
+    kClass: KClass<E1>,
+    init: FormulaBuilder.(CallContextBase<E1>) -> Unit = {}
+  ): Forall<E1> {
+    val ccb = CallContextBase<E1>(kClass)
     val fb = deriveFormulaBuilder(ccb)
     ccb.dslBuilder = fb
     return fb.apply { init(ccb) }.buildForall(ccb).also { phi.add(it) }
   }
 
-  fun <
-      E1 : E,
+  inline fun <
+      reified E1 : E,
       E : EntityType<E, T, S, U, D>,
       T : TickDataType<E, T, S, U, D>,
       S : SegmentType<E, T, S, U, D>,
       U : TickUnit<U, D>,
       D : TickDifference<D>> FormulaBuilder.exists(
-      init: FormulaBuilder.(CallContextBase<E1>) -> Unit = {}
+      noinline init: FormulaBuilder.(CallContextBase<E1>) -> Unit = {}
   ): Exists<E1> {
-    val ccb = CallContextBase<E1>()
+    return exists(E1::class, init)
+  }
+
+  fun <
+    E1 : E,
+    E : EntityType<E, T, S, U, D>,
+    T : TickDataType<E, T, S, U, D>,
+    S : SegmentType<E, T, S, U, D>,
+    U : TickUnit<U, D>,
+    D : TickDifference<D>> FormulaBuilder.exists(
+    kClass: KClass<E1>,
+    init: FormulaBuilder.(CallContextBase<E1>) -> Unit = {}
+  ): Exists<E1> {
+    val ccb = CallContextBase<E1>(kClass)
     val fb = deriveFormulaBuilder(ccb)
     ccb.dslBuilder = fb
     return fb.apply { init(ccb) }.buildExists(ccb).also { phi.add(it) }
@@ -364,11 +391,19 @@ class FormulaBuilder(
     }
   }
 
-  fun <Type> FormulaBuilder.binding(
+  inline fun <reified Type : Any> FormulaBuilder.binding(
       term: Term<Type>,
-      init: FormulaBuilder.(CallContextBase<Type>) -> Unit = {}
+      noinline init: FormulaBuilder.(CallContextBase<Type>) -> Unit = {}
   ): Binding<Type> {
-    val ccb = CallContextBase<Type>()
+    return binding(Type::class, term, init)
+  }
+
+  fun <Type : Any> FormulaBuilder.binding(
+    kClass: KClass<Type>,
+    term: Term<Type>,
+    init: FormulaBuilder.(CallContextBase<Type>) -> Unit = {}
+  ): Binding<Type> {
+    val ccb = CallContextBase<Type>(kClass)
     val fb = deriveFormulaBuilder(ccb)
     ccb.dslBuilder = fb
     return fb.apply { init(ccb) }.buildBinding(ccb, term).also { phi.add(it) }

@@ -42,7 +42,7 @@ data class Forall<E : EntityType<*, *, *, *, *>>(val ccb: CallContextBase<E>, va
 data class Exists<E : EntityType<*, *, *, *, *>>(val ccb: CallContextBase<E>, val inner: Formula) :
     Formula
 
-data class Binding<Type>(
+data class Binding<Type: Any>(
     val ccb: CallContextBase<Type>,
     val bindTerm: Term<Type>,
     val inner: Formula

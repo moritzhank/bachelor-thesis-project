@@ -81,7 +81,7 @@ sealed interface Callable3CallContext<Caller, Param1, Param2, Return> :
 }
 
 /** Starting point for defining symbolic member calls to [Type]. */
-class CallContextBase<Type> : CallContext<Nothing, Type> {
+class CallContextBase<Type: Any>(val kClass: KClass<Type>) : CallContext<Nothing, Type> {
 
   var debugInfo: String? = null
   override val before: CallContext<*, Nothing>? = null

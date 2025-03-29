@@ -9,6 +9,7 @@ import de.moritzhank.cmftbl.smt.solver.dsl.renderLatexFormula
 import de.moritzhank.cmftbl.smt.solver.dsl.times
 import de.moritzhank.cmftbl.smt.solver.misc.*
 import de.moritzhank.cmftbl.smt.solver.translation.formula.genEval
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generateSmtLib
 import tools.aqua.stars.data.av.dataclasses.*
 
 private val changedLaneAndHadSpeedBefore = formula { v: CCB<Vehicle> ->
@@ -33,9 +34,12 @@ private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
 }
 
 fun main() {
-  val ccb = CCB<Vehicle>().apply { debugInfo = "v" }
+  val ccb = CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" }
 
-  renderLatexFormula(formulaToLatex(changedLaneAndHadSpeedBefore(CCB<Vehicle>().apply { debugInfo = "v" })))
+  renderLatexFormula(formulaToLatex(changedLaneAndHadSpeedBefore(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
   val graphViz = changedLaneAndHadSpeedBefore.genEval(emptyVehicle(id = 1), "v", arrayOf(1.0, 2.0, 3.0, 4.0, 5.5)).generateGraphvizCode()
   renderTree(graphViz)
+
+  val test = generateSmtLib(changedLaneAndHadSpeedBefore, emptyVehicle(id = 1), "v", arrayOf(1.0, 2.0, 3.0, 4.0, 5.5))
+  println(test)
 }

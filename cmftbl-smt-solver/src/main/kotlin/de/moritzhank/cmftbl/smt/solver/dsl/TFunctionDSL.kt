@@ -3,6 +3,7 @@
 package de.moritzhank.cmftbl.smt.solver.dsl
 
 import kotlin.reflect.KCallable
+import kotlin.reflect.KClass
 
 // Important: The TFunction-DSL cannot contain infix operators, because this would conflict with the
 // correctness of the return type
@@ -22,10 +23,18 @@ class TFunctionBuilder<Return>(
     }
 
     /** Define function with one parameter. */
-    fun <Param, Return> function(
-        init: TFunctionBuilder<Return>.(CallContextBase<Param>) -> Unit
+    inline fun <reified Param : Any, Return> function(
+        noinline init: TFunctionBuilder<Return>.(CallContextBase<Param>) -> Unit
     ): T2Function<Param, Return> {
-      val params = listOf(CallContextBase<Param>())
+      return function(Param::class, init)
+    }
+
+    /** Define function with one parameter. */
+    fun <Param : Any, Return> function(
+      kClass: KClass<Param>,
+      init: TFunctionBuilder<Return>.(CallContextBase<Param>) -> Unit
+    ): T2Function<Param, Return> {
+      val params = listOf(CallContextBase<Param>(kClass))
       val builder = TFunctionBuilder<Return>(params, mutableMapOf())
       params[0].dslBuilder = builder
       init.invoke(builder, params[0])
@@ -33,11 +42,20 @@ class TFunctionBuilder<Return>(
     }
 
     /** Define function with two parameters. */
-    fun <Param1, Param2, Return> function(
-        init: TFunctionBuilder<Return>.(CallContextBase<Param1>, CallContextBase<Param2>) -> Unit
+    inline fun <reified Param1 : Any, reified Param2 : Any, Return> function(
+        noinline init: TFunctionBuilder<Return>.(CallContextBase<Param1>, CallContextBase<Param2>) -> Unit
     ): T3Function<Param1, Param2, Return> {
-      val param1 = CallContextBase<Param1>()
-      val param2 = CallContextBase<Param2>()
+      return function(Param1::class, Param2::class, init)
+    }
+
+    /** Define function with two parameters. */
+    fun <Param1 : Any, Param2 : Any, Return> function(
+      kClass1: KClass<Param1>,
+      kClass2: KClass<Param2>,
+      init: TFunctionBuilder<Return>.(CallContextBase<Param1>, CallContextBase<Param2>) -> Unit
+    ): T3Function<Param1, Param2, Return> {
+      val param1 = CallContextBase<Param1>(kClass1)
+      val param2 = CallContextBase<Param2>(kClass2)
       val builder = TFunctionBuilder<Return>(listOf(param1, param2), mutableMapOf())
       param1.dslBuilder = builder
       param2.dslBuilder = builder
@@ -46,14 +64,22 @@ class TFunctionBuilder<Return>(
     }
 
     /** Define function with three parameters. */
-    fun <Param1, Param2, Param3, Return> function(
-        init:
-            TFunctionBuilder<Return>.(
-                CallContextBase<Param1>, CallContextBase<Param2>, CallContextBase<Param3>) -> Unit
+    inline fun <reified Param1 : Any, reified Param2 : Any, reified Param3 : Any, Return> function(
+      noinline init: TFunctionBuilder<Return>.(CCB<Param1>, CCB<Param2>, CCB<Param3>) -> Unit
     ): T4Function<Param1, Param2, Param3, Return> {
-      val param1 = CallContextBase<Param1>()
-      val param2 = CallContextBase<Param2>()
-      val param3 = CallContextBase<Param3>()
+      return function(Param1::class, Param2::class, Param3::class, init)
+    }
+
+    /** Define function with three parameters. */
+    fun <Param1 : Any, Param2 : Any, Param3 : Any, Return> function(
+      kClass1 : KClass<Param1>,
+      kClass2 : KClass<Param2>,
+      kClass3 : KClass<Param3>,
+      init: TFunctionBuilder<Return>.(CallContextBase<Param1>, CallContextBase<Param2>, CallContextBase<Param3>) -> Unit
+    ): T4Function<Param1, Param2, Param3, Return> {
+      val param1 = CallContextBase<Param1>(kClass1)
+      val param2 = CallContextBase<Param2>(kClass2)
+      val param3 = CallContextBase<Param3>(kClass3)
       val builder = TFunctionBuilder<Return>(listOf(param1, param2, param3), mutableMapOf())
       param1.dslBuilder = builder
       param2.dslBuilder = builder
@@ -128,11 +154,19 @@ class TFunctionBuilder<Return>(
         .also { funs.add(it) }
   }
 
-  fun <C, T : Collection<C>> TFunctionBuilder<T>.filter(
+  inline fun <reified C : Any, T : Collection<C>> TFunctionBuilder<T>.filter(
+    collection: CallContext<*, T>,
+    noinline init: TFunctionBuilder<Boolean>.(CallContextBase<C>) -> Unit
+  ): TFFilter<C, T> {
+    return filter(C::class, collection, init)
+  }
+
+  fun <C: Any, T : Collection<C>> TFunctionBuilder<T>.filter(
+      kClass: KClass<C>,
       collection: CallContext<*, T>,
       init: TFunctionBuilder<Boolean>.(CallContextBase<C>) -> Unit
   ): TFFilter<C, T> {
-    val ccb = CallContextBase<C>()
+    val ccb = CallContextBase<C>(kClass)
     val fb = TFunctionBuilder<Boolean>(allowedCCBs.plus(ccb), registeredFunctions.toMutableMap())
     ccb.dslBuilder = fb
     init.invoke(fb, ccb)

@@ -40,6 +40,6 @@ fun main() {
     }
   }
 
-  val ast = hasMidTrafficDensity(CCB<Vehicle>().apply { debugInfo = "v" })
+  val ast = hasMidTrafficDensity(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })
   renderLatexFormula(formulaToLatex(ast))
 }

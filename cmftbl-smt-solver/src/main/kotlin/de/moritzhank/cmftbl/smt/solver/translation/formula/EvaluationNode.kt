@@ -12,6 +12,25 @@ internal interface IEvalNode: ITreeVisualizationNode {
   override val children: MutableList<IEvalNode>
   val evaluationContext: EvaluationContext
   val emissions: MutableList<IEmission>
+
+  /** Iterator that traverses the tree by breadth search.  */
+  override fun iterator() = object : Iterator<IEvalNode> {
+
+    private val queue = ArrayDeque<IEvalNode>().apply {
+      add(this@IEvalNode)
+    }
+
+    override fun hasNext() = queue.isNotEmpty()
+
+    override fun next(): IEvalNode {
+      val next = queue.removeFirst()
+      next.children.forEach {
+        queue.add(it)
+      }
+      return next
+    }
+  }
+
 }
 
 /** Node just for organisation. */

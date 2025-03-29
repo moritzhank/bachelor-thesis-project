@@ -40,7 +40,7 @@ val hasMidTrafficDensity = formula { v: CCB<Vehicle> ->
     const(6) leq numVehicles and (numVehicles leq const(15))
   }
 }
-val ast = hasMidTrafficDensity(CCB<Vehicle>().apply { debugInfo = "v" })
+val ast = hasMidTrafficDensity(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })
 
 fun main() {
   val seg: Segment = ExperimentLoader.loadTestSegment()

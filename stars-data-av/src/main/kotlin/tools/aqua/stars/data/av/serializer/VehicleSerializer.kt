@@ -32,6 +32,7 @@ object VehicleSerializer : KSerializer<Vehicle> {
 
   private val tickDataSerializer by lazy { TickDataSerializer }
   private val laneSerializer by lazy { Lane.serializer() }
+  private val vehicleTypeSerializer by lazy { VehicleType.serializer() }
   private val locationSerializer by lazy { Location.serializer() }
   private val vector3DSerializer by lazy { Vector3D.serializer() }
   private val rotationSerializer by lazy { Rotation.serializer() }
@@ -50,14 +51,15 @@ object VehicleSerializer : KSerializer<Vehicle> {
       encodeDoubleElement(descriptor, 2, value.positionOnLane)
       encodeSerializableElement(descriptor, 3, laneSerializer, value.lane)
       encodeStringElement(descriptor, 4, value.typeId)
-      encodeBooleanElement(descriptor, 5, value.isEgo)
-      encodeSerializableElement(descriptor, 6, locationSerializer, value.location)
-      encodeSerializableElement(descriptor, 7, vector3DSerializer, value.forwardVector)
-      encodeSerializableElement(descriptor, 8, rotationSerializer, value.rotation)
-      encodeSerializableElement(descriptor, 9, vector3DSerializer, value.velocity)
-      encodeSerializableElement(descriptor, 10, vector3DSerializer, value.acceleration)
-      encodeSerializableElement(descriptor, 11, vector3DSerializer, value.angularVelocity)
-      encodeDoubleElement(descriptor, 12, value.effVelocityInKmPH)
+      encodeSerializableElement(descriptor, 5, vehicleTypeSerializer, value.vehicleType)
+      encodeBooleanElement(descriptor, 6, value.isEgo)
+      encodeSerializableElement(descriptor, 7, locationSerializer, value.location)
+      encodeSerializableElement(descriptor, 8, vector3DSerializer, value.forwardVector)
+      encodeSerializableElement(descriptor, 9, rotationSerializer, value.rotation)
+      encodeSerializableElement(descriptor, 10, vector3DSerializer, value.velocity)
+      encodeSerializableElement(descriptor, 11, vector3DSerializer, value.acceleration)
+      encodeSerializableElement(descriptor, 12, vector3DSerializer, value.angularVelocity)
+      encodeDoubleElement(descriptor, 13, value.effVelocityInKmPH)
     }
   }
 

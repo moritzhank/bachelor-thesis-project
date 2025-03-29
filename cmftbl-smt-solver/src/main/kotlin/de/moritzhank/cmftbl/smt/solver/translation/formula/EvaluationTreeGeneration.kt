@@ -5,25 +5,46 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula
 import tools.aqua.stars.core.types.EntityType
 import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
+import kotlin.reflect.KClass
 
 
 // TODO: Remove
-fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).genEval(
+inline fun <reified T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).genEval(
   holdsFor: T,
   name: String,
   ticks: Array<Double>
 ) : ITreeVisualizationNode {
-  return this.generateEvaluation(holdsFor, name, ticks)
+  return this.genEval(holdsFor, T::class, name, ticks)
+}
+
+// TODO: Remove
+fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).genEval(
+  holdsFor: T,
+  kClass: KClass<T>,
+  name: String,
+  ticks: Array<Double>
+) : ITreeVisualizationNode {
+  return this.generateEvaluation(holdsFor, kClass, name, ticks)
+}
+
+/** Generates an [IEvalNode] for a formula. */
+internal inline fun <reified T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).generateEvaluation(
+  holdsFor: T,
+  name: String,
+  ticks: Array<Double>
+) : IEvalNode {
+  return this.generateEvaluation(holdsFor, T::class, name, ticks)
 }
 
 /** Generates an [IEvalNode] for a formula. */
 internal fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).generateEvaluation(
   holdsFor: T,
+  kClass: KClass<T>,
   name: String,
   ticks: Array<Double>
 ) : IEvalNode {
   val evalCtx = EvaluationContext(EvaluationIDGenerator(), mapOf(), mapOf(), mapOf())
-  val ccb = CCB<T>().apply { debugInfo = name }
+  val ccb = CCB<T>(kClass).apply { debugInfo = name }
   val ccbSMTName = "vinst_${evalCtx.evaluationIDGenerator.generateID()}"
   val formula = this(ccb).getPhi().first()
 

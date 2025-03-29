@@ -47,8 +47,8 @@ object TickDataSerializer : KSerializer<TickData> {
       element<WeatherParameters>("weather")
       element<Daytime>("daytime")
       element<Segment>("segment")
-      element<List<Vehicle>>("vehicles")
       element<List<Pedestrian>>("pedestrians")
+      element<List<Vehicle>>("vehicles")
     }
   }
 
@@ -61,8 +61,8 @@ object TickDataSerializer : KSerializer<TickData> {
       encodeSerializableElement(descriptor, 3, weatherParametersSerializer, value.weather)
       encodeSerializableElement(descriptor, 4, dayTimeSerializer, value.daytime)
       encodeSerializableElement(descriptor, 5, segmentSerializer, value.segment)
-      encodeSerializableElement(descriptor, 6, vehicleListSerializer, value.vehicles)
-      encodeSerializableElement(descriptor, 7, pedestrianListSerializer, value.pedestrians)
+      encodeSerializableElement(descriptor, 6, pedestrianListSerializer, value.pedestrians)
+      encodeSerializableElement(descriptor, 7, vehicleListSerializer, value.vehicles)
     }
   }
 

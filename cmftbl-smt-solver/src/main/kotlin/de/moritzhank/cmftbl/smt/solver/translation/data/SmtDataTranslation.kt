@@ -10,7 +10,11 @@ import de.moritzhank.cmftbl.smt.solver.misc.negate
 import de.moritzhank.cmftbl.smt.solver.misc.toSmtLibPrimitiveFormat
 
 /** Generate SmtLib. */
-fun generateSmtLib(wrapper: SmtDataTranslationWrapper, solver: SmtSolver = SmtSolver.CVC5): String {
+fun generateSmtLib(
+  wrapper: SmtDataTranslationWrapper,
+  solver: SmtSolver = SmtSolver.CVC5,
+  logic: String = "ALL"
+): String {
   val result = StringBuilder()
   val termForNegativeNumber =
       if (solver == SmtSolver.YICES) {
@@ -19,10 +23,9 @@ fun generateSmtLib(wrapper: SmtDataTranslationWrapper, solver: SmtSolver = SmtSo
         { x: Number -> x._toSmtLibPrimitiveFormat() }
       }
   val termForMinusOne = termForNegativeNumber(-1)
-  val termForMinusTwo = termForNegativeNumber(-2)
 
   // Prelude
-  result.appendLine("(set-logic ALL)")
+  result.appendLine("(set-logic $logic)")
   result.appendLine()
 
   // Generate sort intervals
@@ -144,47 +147,17 @@ fun generateSmtLib(wrapper: SmtDataTranslationWrapper, solver: SmtSolver = SmtSo
   result.appendLine()
 
   result.appendLine("; Information about the ticks")
-  // Generate firstTick
-  val firstTick = wrapper.smtIDToExternalID[wrapper.listOfChronologicalTicks[0].getSmtID()]!!
-  result.appendLine("(define-fun firstTick () Int ${firstTick})")
-  // Generate nextTick
   val indexToTick = wrapper.listOfChronologicalTicks.mapIndexed { index, tick -> index to tick }
-  val tickIndexToNext = { tickIndex: Int ->
-    if (tickIndex == wrapper.listOfChronologicalTicks.size - 1) {
-      -1
-    } else {
-      wrapper.smtIDToExternalID[wrapper.listOfChronologicalTicks[tickIndex + 1].getSmtID()]!!
-    }
-  }
   val iteStructure4 =
       generateEqualsITEStructure(
           indexToTick,
-          "tickId",
-          { ifEntry -> "${wrapper.smtIDToExternalID[ifEntry.component2().getSmtID()]!!}" },
+          "tickIndex",
+          { ifEntry -> "${ifEntry.first}" },
           { thenEntry ->
-            tickIndexToNext(thenEntry.component1()).toSmtLibPrimitiveFormat(termForNegativeNumber)
+            "${wrapper.smtIDToExternalID[thenEntry.second.getSmtID()]!!}"
           },
-          termForMinusTwo)
-  result.appendLine("(define-fun nextTick ((tickId Int)) Int $iteStructure4)")
-  // Generate prevTick
-  val tickIndexToPrevious = { tickIndex: Int ->
-    if (tickIndex == 0) {
-      -1
-    } else {
-      wrapper.smtIDToExternalID[wrapper.listOfChronologicalTicks[tickIndex - 1].getSmtID()]!!
-    }
-  }
-  val iteStructure5 =
-      generateEqualsITEStructure(
-          indexToTick,
-          "tickId",
-          { ifEntry -> "${wrapper.smtIDToExternalID[ifEntry.component2().getSmtID()]!!}" },
-          { thenEntry ->
-            tickIndexToPrevious(thenEntry.component1())
-                .toSmtLibPrimitiveFormat(termForNegativeNumber)
-          },
-          termForMinusTwo)
-  result.appendLine("(define-fun prevTick ((tickId Int)) Int $iteStructure5)")
+          termForMinusOne)
+  result.appendLine("(define-fun indexToTick ((tickIndex Int)) Int $iteStructure4)")
   result.appendLine()
 
   return result.toString()
