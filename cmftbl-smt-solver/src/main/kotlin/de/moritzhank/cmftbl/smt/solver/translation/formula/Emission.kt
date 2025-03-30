@@ -70,10 +70,8 @@ internal class TermFromChildrenConstraintEmission(
   override val annotation: String? = null,
 ): IAssertionEmission {
 
-  init {
-    require(evalNode1.evaluable is Term<*>)
-    require(evalNode2.evaluable is Term<*>)
-  }
+  val term1 = evalNode1.evaluable as Term<*>
+  val term2 = evalNode2.evaluable as Term<*>
 
 }
 
@@ -84,15 +82,12 @@ internal class BindingTermFromChildEmission(
   override val annotation: String? = null,
 ): IAssertionEmission {
 
-  init {
-    require(evalNode1.evaluable is Term<*>)
-  }
+  val term = evalNode1.evaluable as Term<*>
 
 }
 
 /**
- * Represents the emission of the equality constraint of the top right child of
- * [de.haneke.moritz.cmftbl.smt.solver.dsl.Until] or [de.haneke.moritz.cmftbl.smt.solver.dsl.Since] that ensures
+ * Represents the emission of the equality constraint of the top right child of Until or Since that ensures
  * that the tick precondition for the left side is constructed correctly.
  */
 internal class TickWitnessTimeEmission(
@@ -110,7 +105,7 @@ internal fun IEmission.str(): String {
     is EvalAtTickConstraintEmission -> "Emits ASSERT tickIndex($variableID) $eq $tickIndex"
     is EvalInIntervalConstraintEmission -> "Emits ASSERT time($variableID) in ${interval.str()}"
     is TermFromChildrenConstraintEmission -> {
-      "Emits ASSERT ${termToString(evalNode1)} $eq ${termToString(evalNode2)}"
+      "Emits ASSERT ${termToString(evalNode1)} ${operator.toHTMLString()} ${termToString(evalNode2)}"
     }
     is BindingTermFromChildEmission -> "Emits ASSERT $variableID $eq ${termToString(evalNode1)}"
     is TickWitnessTimeEmission -> "Emits ASSERT $twtnsID $eq time($wtnsID)"

@@ -59,6 +59,15 @@ enum class Relation {
     Ne -> "≠"
   }
 
+  internal fun toSMTString() = when(this) {
+    Leq -> "<="
+    Geq -> ">="
+    Lt -> "<"
+    Gt -> ">"
+    Eq -> "="
+    Ne -> "distinct"
+  }
+
   fun toHTMLString() = when(this) {
     Leq -> "&le;"
     Geq -> "&ge;"

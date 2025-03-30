@@ -15,12 +15,16 @@ import de.moritzhank.cmftbl.smt.solver.misc.ClassValueCache
 import de.moritzhank.cmftbl.smt.solver.misc.getKmProperties
 import de.moritzhank.cmftbl.smt.solver.misc.getSimpleName
 import de.moritzhank.cmftbl.smt.solver.misc.resolveClassAndGenericArgumentClass
+import tools.aqua.stars.core.types.EntityType
+import kotlin.reflect.full.isSubclassOf
 
 /** Stores a list of translatable properties of a class. */
 internal class SmtTranslationClassInfo(
     /** Name of the translated class. */
     private val translationName: String,
-    private val properties: Array<Property>
+    private val properties: Array<Property>,
+    /** Does class inherit from [EntityType]? */
+    val isEntityType: Boolean
 ) {
 
   fun isTranslatableProperty(name: String): Boolean = properties.any { it.name == name }
@@ -53,8 +57,7 @@ internal val SMT_TRANSLATION_CACHE = ClassValueCache<SmtTranslationClassInfo>()
 internal fun <T : Any> smtTranslationClassInfo(kClass: KClass<T>): SmtTranslationClassInfo {
   // Lambda expression to calculate the SmtTranslationClassInfo for kClass
   val smtTranslationClassInfoFactory: () -> SmtTranslationClassInfo = {
-    val translationName: String =
-        kClass.findAnnotation<SerialName>()?.value ?: getSimpleName(kClass)
+    val translationName: String = kClass.findAnnotation<SerialName>()?.value ?: getSimpleName(kClass)
     val translatableProperties = mutableListOf<SmtTranslationClassInfo.Property>()
     for (kmProperty in getKmProperties(kClass)) {
       // Get the kProperty associated with kmProperty
@@ -109,7 +112,8 @@ internal fun <T : Any> smtTranslationClassInfo(kClass: KClass<T>): SmtTranslatio
               kProperty.name, isNonTrivialGetter, clazz, genericArgumentClass)
       translatableProperties.add(newProperty)
     }
-    SmtTranslationClassInfo(translationName, translatableProperties.toTypedArray())
+    val isEntityType = kClass.isSubclassOf(EntityType::class)
+    SmtTranslationClassInfo(translationName, translatableProperties.toTypedArray(), isEntityType)
   }
   return SMT_TRANSLATION_CACHE.getOrSet(kClass, smtTranslationClassInfoFactory)
 }

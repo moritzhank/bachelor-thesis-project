@@ -2,12 +2,16 @@
 
 package de.moritzhank.cmftbl.smt.solver.experiments
 
+import de.moritzhank.cmftbl.smt.solver.ExperimentLoader
+import de.moritzhank.cmftbl.smt.solver.SmtSolver
 import de.moritzhank.cmftbl.smt.solver.dsl.CCB
 import de.moritzhank.cmftbl.smt.solver.dsl.FormulaBuilder.Companion.formula
 import de.moritzhank.cmftbl.smt.solver.dsl.formulaToLatex
 import de.moritzhank.cmftbl.smt.solver.dsl.renderLatexFormula
 import de.moritzhank.cmftbl.smt.solver.dsl.times
+import de.moritzhank.cmftbl.smt.solver.generateSmtLibForSegment
 import de.moritzhank.cmftbl.smt.solver.misc.*
+import de.moritzhank.cmftbl.smt.solver.runSmtSolver
 import de.moritzhank.cmftbl.smt.solver.translation.formula.genEval
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generateSmtLib
 import tools.aqua.stars.data.av.dataclasses.*
@@ -36,10 +40,17 @@ private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
 fun main() {
   val ccb = CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" }
 
+  //Viewing Town 10HD, Seed 3, Segment 1, Vehicle 49
+  val seg: Segment = ExperimentLoader.loadTestSegments("10HD", "3")[1]
+  val vehicleID = 49
+  val ticks = seg.tickData.map { it.currentTick.tickSeconds }.toTypedArray()
+
   renderLatexFormula(formulaToLatex(changedLaneAndHadSpeedBefore(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
-  val graphViz = changedLaneAndHadSpeedBefore.genEval(emptyVehicle(id = 1), "v", arrayOf(1.0, 2.0, 3.0, 4.0, 5.5)).generateGraphvizCode()
+  val graphViz = changedLaneAndHadSpeedBefore.genEval(emptyVehicle(id = vehicleID), "v", ticks).generateGraphvizCode()
   renderTree(graphViz)
 
-  val test = generateSmtLib(changedLaneAndHadSpeedBefore, emptyVehicle(id = 1), "v", arrayOf(1.0, 2.0, 3.0, 4.0, 5.5))
-  println(test)
+  val dataSmtLib = generateSmtLibForSegment(seg, SmtSolver.YICES, "QF_LIRA")
+  val formulaSmtLib = generateSmtLib(changedLaneAndHadSpeedBefore, emptyVehicle(id = vehicleID), "v", ticks)
+
+  println(runSmtSolver("$dataSmtLib$formulaSmtLib(check-sat)", SmtSolver.YICES, false))
 }

@@ -38,12 +38,25 @@ private val changesLaneAndNoRollBefore =
     )
   }
 
+private val changedLaneAndNoSpeedBefore =
+  predicate(Vehicle::class) { ctx, v ->
+    val lane = v.lane
+    until(
+      v,
+      TickDataDifferenceSeconds(1.0) to TickDataDifferenceSeconds(3.0),
+      phi1 = { v0: Vehicle -> v0.effVelocityInKmPH > 0 }, //v0.rotation.roll < 1.5
+      phi2 = { v1: Vehicle ->
+        v1.lane.laneId != lane.laneId
+      }
+    )
+  }
+
 private fun batchWatchSatSegs(town: String = "10HD", seed: String = "3") {
   val segs = ExperimentLoader.loadTestSegments(town, seed)
   val resultList = mutableListOf<Pair<Int, Vehicle>>()
   segs.forEachIndexed { segI, seg ->
     for (v in seg.tickData.first().vehicles) {
-      val holds = changesLaneAndNoRollBefore.holds(PredicateContext(seg), v)
+      val holds = changedLaneAndNoSpeedBefore.holds(PredicateContext(seg), v)
       if (holds) {
         resultList.add(Pair(segI, v))
       }

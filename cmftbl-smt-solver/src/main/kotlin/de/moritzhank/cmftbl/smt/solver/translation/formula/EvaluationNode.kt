@@ -132,7 +132,7 @@ internal class VarIntroNode(
   /** Asserted ID of the emitted variable of the underlying [tools.aqua.stars.core.types.EntityType]. */
   val assertedID: Int,
   /** Defines which tick is evaluated. */
-  val evaluatedTickIndex: Int?,
+  val evaluatedTickIndex: Int,
   /** Defines which interval is evaluated. */
   val evaluatedInterval: Pair<Int, Int>?,
 ): IEvalNode {
@@ -142,7 +142,7 @@ internal class VarIntroNode(
   init {
     emissions.add(DecConstEmission(emittedID))
     emissions.add(IDConstraintEmission(emittedID, assertedID))
-    if (evaluatedTickIndex == null) {
+    if (evaluatedInterval != null) {
       evaluatedInterval.check()
       emissions.add(EvalInIntervalConstraintEmission(emittedID, evaluatedInterval))
     } else {

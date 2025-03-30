@@ -133,6 +133,17 @@ fun <Caller : Any, Return> CallContext<*, Caller>.callProperty(
   return PropertyCallContextImpl(prop, this)
 }
 
+/** Returns the member name of the [CallContext]. */
+fun CallContext<*, *>.memberName(): String {
+  return when(this) {
+    is Callable1CallContextImpl<*, *> -> func.name
+    is Callable2CallContextImpl<*, *, *> -> func.name
+    is Callable3CallContextImpl<*, *, *, *> -> func.name
+    is PropertyCallContextImpl<*, *> -> prop.name
+    is CallContextBase<*> -> error("CallContextBase is no member!")
+  }
+}
+
 /** Returns a string formatted as "name (...)". */
 fun CallContext<*, *>.toFormattedString(): String {
   val name =

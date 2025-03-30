@@ -61,7 +61,7 @@ internal fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuil
 internal fun Formula.generateEvaluation(
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
-  evalTickIndex: Int?,
+  evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
@@ -84,7 +84,7 @@ private fun generateEvaluationForUntil(
   until: Until,
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
-  evalTickIndex: Int?,
+  evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
@@ -93,7 +93,7 @@ private fun generateEvaluationForUntil(
       require(evalTickPrecond == null) { "The generation of until with present tick precondition is not available yet." }
 
       // Prepare result node
-      val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), until, evalTickIndex!!, evalTickPrecond)
+      val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), until, evalTickIndex, evalTickPrecond)
       val usedUnboundVarsRhs = getUsedUnboundVariables(until.rhs, evalCtx)
       val twtns = if (usedUnboundVarsRhs.isEmpty()) null else "twtns_${evalCtx.evaluationIDGenerator.generateID()}"
       if(twtns != null) {
@@ -112,7 +112,8 @@ private fun generateEvaluationForUntil(
       usedUnboundVarsRhs.forEach {
         val newVarName = "vinst_${lastEvalCtx.evaluationIDGenerator.generateID()}"
         val varID = lastEvalCtx.previouslyAssignedIDs[it]!!
-        val newVarIntroNode = VarIntroNode(mutableListOf(), lastEvalCtx, newVarName, it, varID, null, until.interval)
+        val newVarIntroNode = VarIntroNode(mutableListOf(), lastEvalCtx, newVarName, it, varID, evalTickIndex,
+          until.interval)
         varIntroNodes.add(newVarIntroNode)
         lastEvalCtx = lastEvalCtx.copy(newIntroducedVariable = it to newVarIntroNode)
       }
@@ -146,7 +147,7 @@ private fun generateEvaluationForBinding(
   binding: Binding<*>,
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
-  evalTickIndex: Int?,
+  evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
@@ -159,7 +160,7 @@ private fun generateEvaluationForBinding(
       val emissions = mutableListOf<IEmission>()
       emissions.add(DecConstEmission(boundVarID))
       emissions.add(BindingTermFromChildEmission(boundVarID, evalTerm))
-      EvalNode(mutableListOf(evalTerm, evalNode), evalCtx, emissions, binding, evalTickIndex!!, evalTickPrecond)
+      EvalNode(mutableListOf(evalTerm, evalNode), evalCtx, emissions, binding, evalTickIndex, evalTickPrecond)
     }
     else -> error("Evaluating a binding in anything other than EVALUATE mode is not yet supported.")
   }
@@ -169,7 +170,7 @@ private fun generateEvaluationForBinding(
 private fun EvaluableRelation<*>.generateEvaluationForEvaluableRelation(
   evalContext: EvaluationContext,
   evalType: EvaluationType,
-  evalTickIndex: Int?,
+  evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
@@ -178,7 +179,7 @@ private fun EvaluableRelation<*>.generateEvaluationForEvaluableRelation(
       val lhs = this.lhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as EvalNode
       val rhs = this.rhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as EvalNode
       val emissions = mutableListOf<IEmission>(TermFromChildrenConstraintEmission(type, lhs, rhs))
-      EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalTickIndex!!, evalTickPrecond)
+      EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalTickIndex, evalTickPrecond)
     }
     EvaluationType.WITNESS -> {
       val lhs = this.lhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as WitnessEvalNode
@@ -187,7 +188,7 @@ private fun EvaluableRelation<*>.generateEvaluationForEvaluableRelation(
       WitnessEvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalInterval, evalTickPrecond)
     }
     EvaluationType.UNIV_INST -> {
-      UniversalEvalNode(evalContext, this, evalTickIndex!!, evalTickPrecond, evalInterval?.second)
+      UniversalEvalNode(evalContext, this, evalTickIndex, evalTickPrecond, evalInterval?.second)
     }
   }
 }
@@ -196,13 +197,13 @@ private fun EvaluableRelation<*>.generateEvaluationForEvaluableRelation(
 private fun <T> Term<T>.generateEvaluation(
   evalContext: EvaluationContext,
   evalType: EvaluationType,
-  evalTickIndex: Int?,
+  evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
 ): IEvalNode {
   val termStr = this.str((this as? Variable<*>)?.let { evalContext.getSmtID(it.callContext.base()) })
   return when(evalType) {
     EvaluationType.EVALUATE -> {
-      EvalNode(mutableListOf(), evalContext, mutableListOf(), this, evalTickIndex!!, null, termStr)
+      EvalNode(mutableListOf(), evalContext, mutableListOf(), this, evalTickIndex, null, termStr)
     }
     EvaluationType.WITNESS -> {
       WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), this, evalInterval, null, termStr)
