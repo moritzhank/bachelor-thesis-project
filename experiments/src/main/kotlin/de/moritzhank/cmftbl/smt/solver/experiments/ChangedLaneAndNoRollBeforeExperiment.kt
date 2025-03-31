@@ -3,27 +3,16 @@
 package de.moritzhank.cmftbl.smt.solver.experiments
 
 import de.moritzhank.cmftbl.smt.solver.ExperimentLoader
-import de.moritzhank.cmftbl.smt.solver.SmtSolver
 import de.moritzhank.cmftbl.smt.solver.dsl.CCB
 import de.moritzhank.cmftbl.smt.solver.dsl.FormulaBuilder.Companion.formula
 import de.moritzhank.cmftbl.smt.solver.dsl.formulaToLatex
 import de.moritzhank.cmftbl.smt.solver.dsl.renderLatexFormula
 import de.moritzhank.cmftbl.smt.solver.dsl.times
-import de.moritzhank.cmftbl.smt.solver.generateSmtLibForSegment
-import de.moritzhank.cmftbl.smt.solver.misc.*
-import de.moritzhank.cmftbl.smt.solver.runSmtSolver
+import de.moritzhank.cmftbl.smt.solver.misc.emptyVehicle
+import de.moritzhank.cmftbl.smt.solver.misc.generateGraphvizCode
+import de.moritzhank.cmftbl.smt.solver.misc.renderTree
 import de.moritzhank.cmftbl.smt.solver.translation.formula.genEval
-import de.moritzhank.cmftbl.smt.solver.translation.formula.generateSmtLib
 import tools.aqua.stars.data.av.dataclasses.*
-
-private val changedLaneAndHadSpeedBefore = formula { v: CCB<Vehicle> ->
-  binding(term(v * Vehicle::lane)) { l ->
-    until(Pair(1, 3)) {
-      term(v * Vehicle::effVelocityInKmPH) gt const(0.0)
-      term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)
-    }
-  }.apply { ccb.debugInfo = "l" }
-}
 
 private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
   until(Pair(1, 2)) {
@@ -45,12 +34,14 @@ fun main() {
   val vehicleID = 49
   val ticks = seg.tickData.map { it.currentTick.tickSeconds }.toTypedArray()
 
-  renderLatexFormula(formulaToLatex(changedLaneAndHadSpeedBefore(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
-  val graphViz = changedLaneAndHadSpeedBefore.genEval(emptyVehicle(id = vehicleID), "v", ticks).generateGraphvizCode()
+  renderLatexFormula(formulaToLatex(changesLaneAndNoRollBefore(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
+  val graphViz = changesLaneAndNoRollBefore.genEval(emptyVehicle(id = vehicleID), "v", ticks).generateGraphvizCode()
   renderTree(graphViz)
 
+  /*
   val dataSmtLib = generateSmtLibForSegment(seg, SmtSolver.YICES, "QF_LIRA")
-  val formulaSmtLib = generateSmtLib(changedLaneAndHadSpeedBefore, emptyVehicle(id = vehicleID), "v", ticks)
+  val formulaSmtLib = generateSmtLib(changesLaneAndNoRollBefore, emptyVehicle(id = vehicleID), "v", ticks)
 
-  println(runSmtSolver("$dataSmtLib$formulaSmtLib(check-sat)", SmtSolver.YICES, false))
+  println(runSmtSolver("$dataSmtLib$formulaSmtLib(check-sat)", SmtSolver.YICES, false)
+   */
 }

@@ -4,19 +4,21 @@ import tools.aqua.stars.core.types.EntityType
 
 sealed interface Formula : Evaluable
 
+sealed interface LogicalConnectiveFormula : Formula
+
 data object TT : Formula
 
 data object FF : Formula
 
-data class Neg(val inner: Formula) : Formula
+data class Neg(val inner: Formula) : LogicalConnectiveFormula
 
-data class And(val lhs: Formula, val rhs: Formula) : Formula
+data class And(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
-data class Or(val lhs: Formula, val rhs: Formula) : Formula
+data class Or(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
-data class Implication(val lhs: Formula, val rhs: Formula) : Formula
+data class Implication(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
-data class Iff(val lhs: Formula, val rhs: Formula) : Formula
+data class Iff(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
 data class Prev(val interval: Pair<Int, Int>? = null, val inner: Formula) : Formula
 

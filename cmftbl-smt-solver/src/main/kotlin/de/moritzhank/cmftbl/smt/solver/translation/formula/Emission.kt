@@ -2,6 +2,8 @@
 
 package de.moritzhank.cmftbl.smt.solver.translation.formula
 
+import de.moritzhank.cmftbl.smt.solver.dsl.Formula
+import de.moritzhank.cmftbl.smt.solver.dsl.LogicalConnectiveFormula
 import de.moritzhank.cmftbl.smt.solver.dsl.Relation
 import de.moritzhank.cmftbl.smt.solver.dsl.Term
 import de.moritzhank.cmftbl.smt.solver.dsl.Variable
@@ -75,6 +77,21 @@ internal class TermFromChildrenConstraintEmission(
 
 }
 
+/**
+ * Represents the emission of an assertion in SMT that is specific to the evaluated node and depends on the child nodes.
+ */
+internal class FormulaFromChildrenConstraintEmission(
+  val formula: LogicalConnectiveFormula,
+  val evalNode1: IEvalNodeWithEvaluable,
+  val evalNode2: IEvalNodeWithEvaluable,
+  override val annotation: String? = null,
+): IAssertionEmission {
+
+  val childFormula1 = evalNode1.evaluable as Formula
+  val childFormula2 = evalNode2.evaluable as Formula
+
+}
+
 /** Represents the emission of an assertion in SMT that binds a term to a variable. */
 internal class BindingTermFromChildEmission(
   val variableID: String,
@@ -109,6 +126,7 @@ internal fun IEmission.str(): String {
     }
     is BindingTermFromChildEmission -> "Emits ASSERT $variableID $eq ${termToString(evalNode1)}"
     is TickWitnessTimeEmission -> "Emits ASSERT $twtnsID $eq time($wtnsID)"
+    is FormulaFromChildrenConstraintEmission -> "Emits ASSERT "
   } + annotationInParantheses
 }
 

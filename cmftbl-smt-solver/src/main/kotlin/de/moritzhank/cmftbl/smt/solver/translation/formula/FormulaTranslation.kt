@@ -1,10 +1,6 @@
 package de.moritzhank.cmftbl.smt.solver.translation.formula
 
-import de.moritzhank.cmftbl.smt.solver.dsl.CallContextBase
-import de.moritzhank.cmftbl.smt.solver.dsl.Constant
-import de.moritzhank.cmftbl.smt.solver.dsl.FormulaBuilder
-import de.moritzhank.cmftbl.smt.solver.dsl.Term
-import de.moritzhank.cmftbl.smt.solver.dsl.Variable
+import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.idMemberName
 import de.moritzhank.cmftbl.smt.solver.misc.tickMemberName
 import de.moritzhank.cmftbl.smt.solver.misc.toSmtRepresentation
@@ -74,13 +70,21 @@ fun <T: EntityType<*, *, *, *, *>> generateSmtLib(
           result.appendLine("(assert (= (${node.referenceCCB.tickMemberName()} ${emission.wtnsID}) ${emission.twtnsID}))")
         }
         is TermFromChildrenConstraintEmission -> {
+          require(node is IEvalNodeWithEvaluable)
           val smtTerm1 = termToSmtRepresentation(emission.term1) { v ->
             node.evaluationContext.getSmtID(v.callContext.base())!!
           }
           val smtTerm2 = termToSmtRepresentation(emission.term2) { v ->
             node.evaluationContext.getSmtID(v.callContext.base())!!
           }
-          result.appendLine("(assert (${emission.operator.toSMTString()} $smtTerm1 $smtTerm2))")
+          val evaluable = node.evaluable
+          when (evaluable) {
+            is EvaluableRelation<*> -> {
+              result.appendLine("(assert (${evaluable.type.toSMTString()} $smtTerm1 $smtTerm2))")
+            }
+            is And -> result.appendLine("(assert (and $smtTerm1 $smtTerm2))")
+            else -> error("The evaluation of this node is not yet implemented.")
+          }
         }
       }
     }

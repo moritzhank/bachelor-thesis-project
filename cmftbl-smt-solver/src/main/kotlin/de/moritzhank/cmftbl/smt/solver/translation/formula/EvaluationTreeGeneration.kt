@@ -5,6 +5,8 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula
 import tools.aqua.stars.core.types.EntityType
 import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
+import de.moritzhank.cmftbl.smt.solver.misc.lhs
+import de.moritzhank.cmftbl.smt.solver.misc.rhs
 import kotlin.reflect.KClass
 
 
@@ -74,6 +76,13 @@ internal fun Formula.generateEvaluation(
     }
     is Binding<*> -> {
       generateEvaluationForBinding(this, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+    }
+    is LogicalConnectiveFormula  -> {
+      generateEvaluationForLogicConnective(this, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+    }
+    is Next -> {
+      // TODO
+      this.inner.generateEvaluation(evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecond)
     }
     else -> error("The generation is not yet available for the formula type \"${this::class.simpleName}\".")
   }
@@ -151,18 +160,53 @@ private fun generateEvaluationForBinding(
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
+  val boundVarID = "bnd_${evalCtx.evaluationIDGenerator.generateID()}"
+  val evalTerm = binding.bindTerm.generateEvaluation(evalCtx, evalType, evalTickIndex, null) as IEvalNodeWithEvaluable
+  val newEvalCtx = evalCtx.copy(newBoundCallContext = binding.ccb to boundVarID)
+  val evalNode = binding.inner.generateEvaluation(newEvalCtx, evalType, evalTickIndex, null, evalTickPrecond)
+  val emissions = mutableListOf<IEmission>()
+  emissions.add(DecConstEmission(boundVarID))
+  emissions.add(BindingTermFromChildEmission(boundVarID, evalTerm))
   return when (evalType) {
     EvaluationType.EVALUATE -> {
-      val boundVarID = "bnd_${evalCtx.evaluationIDGenerator.generateID()}"
-      val evalTerm = binding.bindTerm.generateEvaluation(evalCtx, evalType, evalTickIndex, null) as EvalNode
-      val newEvalCtx = evalCtx.copy(newBoundCallContext = binding.ccb to boundVarID)
-      val evalNode = binding.inner.generateEvaluation(newEvalCtx, evalType, evalTickIndex, null, evalTickPrecond)
-      val emissions = mutableListOf<IEmission>()
-      emissions.add(DecConstEmission(boundVarID))
-      emissions.add(BindingTermFromChildEmission(boundVarID, evalTerm))
       EvalNode(mutableListOf(evalTerm, evalNode), evalCtx, emissions, binding, evalTickIndex, evalTickPrecond)
     }
-    else -> error("Evaluating a binding in anything other than EVALUATE mode is not yet supported.")
+    EvaluationType.WITNESS -> {
+      WitnessEvalNode(mutableListOf(evalTerm, evalNode), evalCtx, emissions, binding, evalInterval, evalTickPrecond)
+    }
+    else -> error("Evaluating a binding in anything other than EVALUATE and WITNESS mode is not yet supported.")
+  }
+}
+
+/** Generate an [IEvalNode] from a [EvaluableRelation]. */
+private fun generateEvaluationForLogicConnective(
+  formula: LogicalConnectiveFormula,
+  evalContext: EvaluationContext,
+  evalType: EvaluationType,
+  evalTickIndex: Int,
+  evalInterval: Pair<Int, Int>?,
+  evalTickPrecond: EvaluationTickPrecondition?
+): IEvalNode {
+  if (evalType == EvaluationType.UNIV_INST) {
+    return UniversalEvalNode(evalContext, formula, evalTickIndex, evalTickPrecond, evalInterval?.second)
+  }
+  if (formula is Neg) {
+    error("Evaluating Neg is not available yet.")
+  }
+  val emission = FormulaFromChildrenConstraintEmission(formula, formula.lhs() as IEvalNodeWithEvaluable, formula.rhs() as IEvalNodeWithEvaluable)
+  val emissions = mutableListOf<IEmission>(emission)
+
+
+  val lhs = formula.lhs().generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+  val rhs = formula.rhs().generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+
+
+
+  return if (evalType == EvaluationType.EVALUATE) {
+    EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, and, evalTickIndex, evalTickPrecond)
+  } else {
+    require(evalType == EvaluationType.WITNESS)
+    WitnessEvalNode(mutableListOf(lhs, rhs), evalContext, emissions, and, evalInterval, evalTickPrecond)
   }
 }
 
@@ -174,22 +218,17 @@ private fun EvaluableRelation<*>.generateEvaluationForEvaluableRelation(
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
-  return when (evalType) {
-    EvaluationType.EVALUATE -> {
-      val lhs = this.lhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as EvalNode
-      val rhs = this.rhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as EvalNode
-      val emissions = mutableListOf<IEmission>(TermFromChildrenConstraintEmission(type, lhs, rhs))
-      EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalTickIndex, evalTickPrecond)
-    }
-    EvaluationType.WITNESS -> {
-      val lhs = this.lhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as WitnessEvalNode
-      val rhs = this.rhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as WitnessEvalNode
-      val emissions = mutableListOf<IEmission>(TermFromChildrenConstraintEmission(type, lhs, rhs))
-      WitnessEvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalInterval, evalTickPrecond)
-    }
-    EvaluationType.UNIV_INST -> {
-      UniversalEvalNode(evalContext, this, evalTickIndex, evalTickPrecond, evalInterval?.second)
-    }
+  if (evalType == EvaluationType.UNIV_INST) {
+    return UniversalEvalNode(evalContext, this, evalTickIndex, evalTickPrecond, evalInterval?.second)
+  }
+  val lhs = this.lhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as IEvalNodeWithEvaluable
+  val rhs = this.rhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as IEvalNodeWithEvaluable
+  val emissions = mutableListOf<IEmission>(TermFromChildrenConstraintEmission(type, lhs, rhs))
+  return if (evalType == EvaluationType.EVALUATE) {
+    EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalTickIndex, evalTickPrecond)
+  } else {
+    require(evalType == EvaluationType.WITNESS)
+    WitnessEvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalInterval, evalTickPrecond)
   }
 }
 
