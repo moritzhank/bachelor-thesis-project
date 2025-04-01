@@ -31,8 +31,8 @@ fun <T: EntityType<*, *, *, *, *>> generateSmtLib(
   for (node in evalTree.iterator()) {
     for (emission in node.emissions) {
       when (emission) {
-        is DecConstEmission -> {
-          result.appendLine("(declare-const ${emission.decConstID} Int)")
+        is NewInstanceEmission -> {
+          result.appendLine("(declare-const ${emission.newInstanceID} Int)")
         }
         is BindingTermFromChildEmission -> {
           val term = emission.term
@@ -60,16 +60,16 @@ fun <T: EntityType<*, *, *, *, *>> generateSmtLib(
             result.appendLine("(assert (<= $tickSeconds $intervalRight))")
           }
         }
-        is IDConstraintEmission -> {
+        is ConstrainIDEmission -> {
           require(node is VarIntroNode)
-          val idOfVar = "(${node.referenceCCB.idMemberName()} ${emission.variableID})"
-          result.appendLine("(assert (= $idOfVar ${emission.ID}))")
+          val idOfVar = "(${node.referenceCCB.idMemberName()} ${emission.constraintVariableID})"
+          result.appendLine("(assert (= $idOfVar ${emission.id}))")
         }
         is TickWitnessTimeEmission -> {
           require(node is VarIntroNode)
-          result.appendLine("(assert (= (${node.referenceCCB.tickMemberName()} ${emission.wtnsID}) ${emission.twtnsID}))")
+          result.appendLine("(assert (= (${node.referenceCCB.tickMemberName()} ${emission.witnessID}) ${emission.tickWitnessID}))")
         }
-        is TermFromChildrenConstraintEmission -> {
+        is TermFromChildrenEmission -> {
           require(node is IEvalNodeWithEvaluable)
           val smtTerm1 = termToSmtRepresentation(emission.term1) { v ->
             node.evaluationContext.getSmtID(v.callContext.base())!!
@@ -86,6 +86,8 @@ fun <T: EntityType<*, *, *, *, *>> generateSmtLib(
             else -> error("The evaluation of this node is not yet implemented.")
           }
         }
+        is FormulaFromChildrenEmission -> TODO()
+        is SubFormulaeHoldEmission -> TODO()
       }
     }
   }

@@ -11,7 +11,7 @@ import de.moritzhank.cmftbl.smt.solver.dsl.times
 import de.moritzhank.cmftbl.smt.solver.misc.emptyVehicle
 import de.moritzhank.cmftbl.smt.solver.misc.generateGraphvizCode
 import de.moritzhank.cmftbl.smt.solver.misc.renderTree
-import de.moritzhank.cmftbl.smt.solver.translation.formula.genEval
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generateVisualization
 import tools.aqua.stars.data.av.dataclasses.*
 
 private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
@@ -26,6 +26,12 @@ private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
   }
 }
 
+private val test = formula { v: CCB<Vehicle> ->
+  binding(term(v * Vehicle::lane)) { l ->
+    term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)
+  } impl (term(v * Vehicle::lane * Lane::laneId) ne const(10))
+}
+
 fun main() {
   val ccb = CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" }
 
@@ -34,8 +40,8 @@ fun main() {
   val vehicleID = 49
   val ticks = seg.tickData.map { it.currentTick.tickSeconds }.toTypedArray()
 
-  renderLatexFormula(formulaToLatex(changesLaneAndNoRollBefore(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
-  val graphViz = changesLaneAndNoRollBefore.genEval(emptyVehicle(id = vehicleID), "v", ticks).generateGraphvizCode()
+  renderLatexFormula(formulaToLatex(test(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
+  val graphViz = test.generateVisualization(emptyVehicle(id = vehicleID), "v", ticks).generateGraphvizCode()
   renderTree(graphViz)
 
   /*

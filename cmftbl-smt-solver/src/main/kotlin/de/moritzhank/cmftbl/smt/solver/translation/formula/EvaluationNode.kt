@@ -135,13 +135,14 @@ internal class VarIntroNode(
   val evaluatedTickIndex: Int,
   /** Defines which interval is evaluated. */
   val evaluatedInterval: Pair<Int, Int>?,
+  formulaHoldsVariable: String,
 ): IEvalNode {
 
   override val emissions = mutableListOf<IEmission>()
 
   init {
-    emissions.add(DecConstEmission(emittedID))
-    emissions.add(IDConstraintEmission(emittedID, assertedID))
+    emissions.add(NewInstanceEmission(emittedID))
+    emissions.add(ConstrainIDEmission(emittedID, assertedID, "null"))
     if (evaluatedInterval != null) {
       evaluatedInterval.check()
       emissions.add(EvalInIntervalConstraintEmission(emittedID, evaluatedInterval))

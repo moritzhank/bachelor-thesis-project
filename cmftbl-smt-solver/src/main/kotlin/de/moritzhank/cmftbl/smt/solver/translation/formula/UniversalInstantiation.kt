@@ -32,7 +32,7 @@ private fun instantiateUniversalQuantification(
     usedUnboundVars.forEach {
       val emittedID = "uinst_${evalCtx.evaluationIDGenerator.generateID()}"
       val assignedID = evalCtx.previouslyAssignedIDs[it]!!
-      val newVarIntroNode = VarIntroNode(mutableListOf() ,evalCtx, emittedID, it, assignedID, evalTickIndex, null)
+      val newVarIntroNode = VarIntroNode(mutableListOf() ,evalCtx, emittedID, it, assignedID, evalTickIndex, null, "")
       evalCtx = evalCtx.copy(newIntroducedVariable = it to newVarIntroNode)
       prevIntroNode?.children?.add(newVarIntroNode)
       prevIntroNode = newVarIntroNode
@@ -40,8 +40,8 @@ private fun instantiateUniversalQuantification(
         firstVarIntroNode = newVarIntroNode
       }
     }
-    var newNode = node.evaluable.generateEvaluation(evalCtx, EvaluationType.EVALUATE, evalTickIndex, null,
-      node.tickPrecondition)
+    var newNode = generateEvaluation(node.evaluable, evalCtx, EvaluationType.EVALUATE, evalTickIndex, null,
+      node.tickPrecondition, "")
     firstVarIntroNode?.children?.add(newNode)
     instantiatedNodes.add(firstVarIntroNode ?: newNode)
   }
