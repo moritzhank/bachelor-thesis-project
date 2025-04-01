@@ -78,7 +78,10 @@ internal class EvalNode(
     val line2 = if (tickPrecondition == null) "" else "TickPrecond: ${tickPrecondition.toHTMLString()}<BR/>"
     var assertionLines = ""
     emissions.forEach {
-      assertionLines += "${it.str()}<BR/>"
+      val content = it.str()
+      if (content.isNotEmpty()) {
+        assertionLines += "${content}<BR/>"
+      }
     }
     val annotation_ = if (annotation == null) "" else "<I>$annotation</I>"
     return line1 + line2 + assertionLines + annotation_
@@ -113,7 +116,10 @@ internal class WitnessEvalNode(
     val line2 = if (tickPrecondition == null) "" else "TickPrecond: ${tickPrecondition.toHTMLString()}<BR/>"
     var assertionLines = ""
     emissions.forEach {
-      assertionLines += "${it.str()}<BR/>"
+      val content = it.str()
+      if (content.isNotEmpty()) {
+        assertionLines += "${content}<BR/>"
+      }
     }
     val annotation_ = if (annotation == null) "" else "<I>$annotation</I>"
     return line1 + line2 + assertionLines + annotation_
@@ -136,26 +142,37 @@ internal class VarIntroNode(
   /** Defines which interval is evaluated. */
   val evaluatedInterval: Pair<Int, Int>?,
   formulaHoldsVariable: String,
+  subFormulaHoldsVariable: String,
 ): IEvalNode {
 
   override val emissions = mutableListOf<IEmission>()
 
   init {
     emissions.add(NewInstanceEmission(emittedID))
-    emissions.add(ConstrainIDEmission(emittedID, assertedID, "null"))
+    emissions.add(NewInstanceEmission(subFormulaHoldsVariable, true))
+    val subFormulaHoldsVariable1 = "subFormulaHolds_${evaluationContext.evaluationIDGenerator.generateID()}"
+    val subFormulaHoldsVariable2 = "subFormulaHolds_${evaluationContext.evaluationIDGenerator.generateID()}"
+    emissions.add(NewInstanceEmission(subFormulaHoldsVariable1, true))
+    emissions.add(NewInstanceEmission(subFormulaHoldsVariable2, true))
+    emissions.add(ConstrainIDEmission(emittedID, assertedID, subFormulaHoldsVariable1))
     if (evaluatedInterval != null) {
       evaluatedInterval.check()
-      emissions.add(EvalInIntervalConstraintEmission(emittedID, evaluatedInterval))
+      emissions.add(EvalInIntervalConstraintEmission(emittedID, evaluatedInterval, subFormulaHoldsVariable2))
     } else {
-      emissions.add(EvalAtTickConstraintEmission(emittedID, evaluatedTickIndex))
+      emissions.add(EvalAtTickConstraintEmission(emittedID, evaluatedTickIndex, subFormulaHoldsVariable2))
     }
+    emissions.add(SubFormulaeHoldEmission(formulaHoldsVariable,
+      listOf(subFormulaHoldsVariable, subFormulaHoldsVariable1, subFormulaHoldsVariable2)))
   }
 
   override fun getTVNContent(): String {
     val line1 = "VAR_INTRO $referenceCCB<BR/>"
     var assertionLines = ""
     emissions.forEach {
-      assertionLines += "${it.str()}<BR/>"
+      val content = it.str()
+      if (content.isNotEmpty()) {
+        assertionLines += "${content}<BR/>"
+      }
     }
     return line1 + assertionLines
   }
@@ -190,7 +207,10 @@ internal class UniversalEvalNode(
     val line2 = if (tickPrecondition == null) "" else "TickPrecond: ${tickPrecondition.toHTMLString()}<BR/>"
     var assertionLines = ""
     emissions.forEach {
-      assertionLines += "${it.str()}<BR/>"
+      val content = it.str()
+      if (content.isNotEmpty()) {
+        assertionLines += "${content}<BR/>"
+      }
     }
     return line1 + line2 + assertionLines
   }

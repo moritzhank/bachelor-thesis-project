@@ -51,12 +51,14 @@ internal fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuil
   val formula = this(ccb).getPhi().first()
 
   // Generate VarIntroNode
-  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null, "")
-  val newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb to varIntroNode, newAssignedID = ccb to holdsFor.id)
+  val formulaHolds = "subFormulaHolds_${evalCtx.evaluationIDGenerator.generateID()}"
   val subFormulaHolds = "subFormulaHolds_${evalCtx.evaluationIDGenerator.generateID()}"
-  varIntroNode.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null, subFormulaHolds))
-  varIntroNode.emissions.add(NewInstanceEmission(subFormulaHolds, true))
 
+  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null, formulaHolds, subFormulaHolds)
+  varIntroNode.emissions.add(1, NewInstanceEmission(formulaHolds))
+  val newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb to varIntroNode, newAssignedID = ccb to holdsFor.id)
+  varIntroNode.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null,
+    subFormulaHolds))
   eliminateUniversalQuantification(varIntroNode, ticks)
   return varIntroNode
 }

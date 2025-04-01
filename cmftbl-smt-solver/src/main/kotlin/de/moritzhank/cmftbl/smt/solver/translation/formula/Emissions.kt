@@ -36,15 +36,14 @@ internal class ConstrainIDEmission(
   override val annotation: String? = null
 ) : IEmission
 
-// TODO: add val formulaHoldsVariable: String,
 /** Constraints the evaluation of the [VarIntroNode]'s introduced variable to the tick with the index [tickIndex]. */
 internal class EvalAtTickConstraintEmission(
   val variableID: String,
   val tickIndex: Int,
+  val formulaHoldsVariable: String,
   override val annotation: String? = null
 ): IEmission
 
-// TODO: add val formulaHoldsVariable: String,
 /**
  * Constraints the evaluation of the [VarIntroNode]'s introduced variable to the interval
  * [interval]. The [interval] is relative in relation to [VarIntroNode.evaluatedTickIndex].
@@ -52,6 +51,7 @@ internal class EvalAtTickConstraintEmission(
 internal class EvalInIntervalConstraintEmission(
   val variableID: String,
   val interval: Pair<Int, Int>?,
+  val formulaHoldsVariable: String,
   override val annotation: String? = null
 ): IEmission {
 
@@ -107,39 +107,65 @@ internal class BindingTermFromChildEmission(
 internal class TickWitnessTimeEmission(
   val witnessID: String,
   val tickWitnessID: String,
-  override val annotation: String? = null
-): IEmission
-
-internal class SubFormulaeHoldEmission(
-  val subFormulaHoldsVariables: List<String>,
   val formulaHoldsVariable: String,
   override val annotation: String? = null
 ): IEmission
 
+/** Represents the emission that ensures all emissions of a node hold. */
+internal class SubFormulaeHoldEmission(
+  val formulaHoldsVariable: String,
+  val subFormulaHoldsVariables: List<String>,
+  override val annotation: String? = null
+): IEmission
+
 /** Generate a String representation of [IEmission] suitable for visualization. */
-internal fun IEmission.str(): String {
+internal fun IEmission.str(debugMode: Boolean = true): String {
   val annotationInParentheses = if (this.annotation == null) "" else " (${this.annotation})"
   val eq = Relation.Eq.toHTMLString()
-  return when(this) {
-    is BindingTermFromChildEmission -> "Emits ASSERT $formulaHoldsVariable = ($variableID $eq " +
-            "${termToString(evalNode)})"
-    is ConstrainIDEmission -> "Emits ASSERT $formulaHoldsVariable = (id($constraintVariableID) $eq $id)"
-
-    is EvalAtTickConstraintEmission -> "Emits ASSERT tickIndex($variableID) $eq $tickIndex"
-    is EvalInIntervalConstraintEmission -> "Emits ASSERT time($variableID) in ${interval.str()}"
-    is TickWitnessTimeEmission -> "Emits ASSERT $tickWitnessID $eq time($witnessID)"
-
-    is NewInstanceEmission -> "Emits DEC_CONST $newInstanceID (${if (isBool) "Bool" else "Int"})"
-    is FormulaFromChildrenEmission -> {
-      val connectiveString = binaryLogicalConnectiveToString(formula)
-      "Emits ASSERT $formulaHoldsVariable = ($subFormulaHoldsVariable1 $connectiveString $subFormulaHoldsVariable2)"
-    }
-    is TermFromChildrenEmission -> {
-      "Emits ASSERT $formulaHoldsVariable = (${termToString(evalNode1)} ${operator.toHTMLString()} " +
-              "${termToString(evalNode2)})"
-    }
-    is SubFormulaeHoldEmission -> "Emits ASSERT $formulaHoldsVariable = allHold: $subFormulaHoldsVariables"
-  } + annotationInParentheses
+  if (debugMode) {
+    return when(this) {
+      is BindingTermFromChildEmission -> "Emits ASSERT $formulaHoldsVariable := ($variableID $eq " +
+              "${termToString(evalNode)})"
+      is ConstrainIDEmission -> "Emits ASSERT $formulaHoldsVariable := (id($constraintVariableID) $eq $id)"
+      is EvalAtTickConstraintEmission -> "Emits ASSERT $formulaHoldsVariable := (tickIndex($variableID) $eq $tickIndex)"
+      is EvalInIntervalConstraintEmission -> "Emits ASSERT $formulaHoldsVariable := (time($variableID) in " +
+              "${interval.str()})"
+      is TickWitnessTimeEmission -> "Emits ASSERT $formulaHoldsVariable := ($tickWitnessID $eq time($witnessID))"
+      is NewInstanceEmission -> "Emits DEC_CONST $newInstanceID (${if (isBool) "Bool" else "Int"})"
+      is FormulaFromChildrenEmission -> {
+        val connectiveString = binaryLogicalConnectiveToString(formula)
+        "Emits ASSERT $formulaHoldsVariable := ($subFormulaHoldsVariable1 $connectiveString $subFormulaHoldsVariable2)"
+      }
+      is TermFromChildrenEmission -> {
+        "Emits ASSERT $formulaHoldsVariable := (${termToString(evalNode1)} ${operator.toHTMLString()} " +
+                "${termToString(evalNode2)})"
+      }
+      is SubFormulaeHoldEmission -> "Emits ASSERT $formulaHoldsVariable := allHold: $subFormulaHoldsVariables"
+    } + annotationInParentheses
+  } else {
+    return when(this) {
+      is BindingTermFromChildEmission -> "Emits ASSERT $variableID $eq ${termToString(evalNode)}"
+      is ConstrainIDEmission -> "Emits ASSERT id($constraintVariableID) $eq $id"
+      is EvalAtTickConstraintEmission -> "Emits ASSERT tickIndex($variableID) $eq $tickIndex"
+      is EvalInIntervalConstraintEmission -> "Emits ASSERT time($variableID) in ${interval.str()}"
+      is TickWitnessTimeEmission -> "Emits ASSERT $tickWitnessID $eq time($witnessID)"
+      is NewInstanceEmission -> {
+        if (!isBool) {
+          "Emits DEC_CONST $newInstanceID"
+        } else {
+          ""
+        }
+      }
+      is FormulaFromChildrenEmission -> {
+        val connectiveString = binaryLogicalConnectiveToString(formula)
+        "Emits ASSERT eval(lhs) $connectiveString eval(rhs)"
+      }
+      is TermFromChildrenEmission -> {
+        "Emits ASSERT ${termToString(evalNode1)} ${operator.toHTMLString()} ${termToString(evalNode2)}"
+      }
+      is SubFormulaeHoldEmission -> ""
+    } + annotationInParentheses
+  }
 }
 
 private fun termToString(node: IEvalNodeWithEvaluable): String {

@@ -36,7 +36,7 @@ internal fun generateEvaluationForBinding(
   emissions.add(NewInstanceEmission(subFormulaHolds2, true))
   emissions.add(NewInstanceEmission(boundVarID))
   emissions.add(BindingTermFromChildEmission(boundVarID, evalTerm, subFormulaHolds1))
-  emissions.add(SubFormulaeHoldEmission(listOf(subFormulaHolds1, subFormulaHolds2), formulaHoldsVariable))
+  emissions.add(SubFormulaeHoldEmission(formulaHoldsVariable, listOf(subFormulaHolds1, subFormulaHolds2)))
   return when (evalType) {
     EvaluationType.EVALUATE -> {
       EvalNode(mutableListOf(evalTerm, evalNode), evalCtx, emissions, binding, evalTickIndex, evalTickPrecondition)
