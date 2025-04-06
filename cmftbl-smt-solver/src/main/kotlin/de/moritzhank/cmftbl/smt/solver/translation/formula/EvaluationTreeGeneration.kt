@@ -7,6 +7,7 @@ import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForBinding
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForEvaluableRelation
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForLogicConnective
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForNext
 import tools.aqua.stars.core.types.EntityType
 import kotlin.reflect.KClass
 
@@ -55,7 +56,7 @@ internal fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuil
   val subFormulaHolds = "subFormulaHolds_${evalCtx.evaluationIDGenerator.generateID()}"
 
   val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null, formulaHolds, subFormulaHolds)
-  varIntroNode.emissions.add(1, NewInstanceEmission(formulaHolds))
+  varIntroNode.emissions.add(1, NewInstanceEmission(formulaHolds, true))
   val newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb to varIntroNode, newAssignedID = ccb to holdsFor.id)
   varIntroNode.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null,
     subFormulaHolds))
@@ -86,16 +87,14 @@ internal fun generateEvaluation(
       generateEvaluationForLogicConnective(formula, evalCtx, evalType, evalTickIndex, evalInterval,
         evalTickPrecondition, subFormulaHoldsVariable)
     }
+    is Next -> {
+      generateEvaluationForNext(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition,
+        subFormulaHoldsVariable)
+    }
     /*
     is Until -> {
       generateEvaluationForUntil(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition,
         subFormulaHoldsVariable)
-    }
-     */
-    /*
-    is Next -> {
-      // TODO
-      this.inner.generateEvaluation(evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
     }
      */
     else -> error("The generation is not yet available for the formula type \"${formula::class.simpleName}\".")
