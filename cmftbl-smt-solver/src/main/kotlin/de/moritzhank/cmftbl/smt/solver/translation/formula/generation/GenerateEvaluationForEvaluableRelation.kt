@@ -10,23 +10,24 @@ internal fun generateEvaluationForEvaluableRelation(
   evalType: EvaluationType,
   evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
-  evalTickPrecondition: EvaluationTickPrecondition?,
-  subFormulaHoldsVariable: String
+  evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
   if (evalType == EvaluationType.UNIV_INST) {
     return UniversalEvalNode(evalContext, evaluableRelation, evalTickIndex, evalTickPrecondition, evalInterval?.second)
   }
+  val resultNode = if (evalType == EvaluationType.EVALUATE) {
+    EvalNode(mutableListOf(), evalContext, mutableListOf(), evaluableRelation, evalTickIndex, evalTickPrecondition)
+  } else {
+    require(evalType == EvaluationType.WITNESS)
+    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), evaluableRelation, evalInterval,
+      evalTickPrecondition)
+  }
+  val newEmissionID = evalContext.constraintIDGenerator.generateID()
   val lhs = generateEvaluation(evaluableRelation.lhs, evalContext, evalType, evalTickIndex,
     evalInterval) as IEvalNodeWithEvaluable
   val rhs = generateEvaluation(evaluableRelation.rhs, evalContext, evalType, evalTickIndex,
     evalInterval) as IEvalNodeWithEvaluable
-  val emissions = mutableListOf<IEmission>(TermFromChildrenEmission(evaluableRelation.type, lhs, rhs,
-    subFormulaHoldsVariable))
-  return if (evalType == EvaluationType.EVALUATE) {
-    EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, evaluableRelation, evalTickIndex, evalTickPrecondition)
-  } else {
-    require(evalType == EvaluationType.WITNESS)
-    WitnessEvalNode(mutableListOf(lhs, rhs), evalContext, emissions, evaluableRelation, evalInterval,
-      evalTickPrecondition)
-  }
+  resultNode.children.addAll(listOf(lhs, rhs))
+  resultNode.emissions.add(TermFromChildrenEmission(newEmissionID, evaluableRelation.type, lhs, rhs))
+  return resultNode
 }

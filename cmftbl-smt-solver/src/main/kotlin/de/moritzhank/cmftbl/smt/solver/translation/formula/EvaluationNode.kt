@@ -3,12 +3,15 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula
 import de.moritzhank.cmftbl.smt.solver.dsl.CCB
 import de.moritzhank.cmftbl.smt.solver.dsl.Evaluable
 import de.moritzhank.cmftbl.smt.solver.dsl.Formula
+import de.moritzhank.cmftbl.smt.solver.dsl.Term
 import de.moritzhank.cmftbl.smt.solver.dsl.str
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
 import de.moritzhank.cmftbl.smt.solver.misc.check
 
 /** Abstraction of the translation process of formula AST. */
 internal interface IEvalNode: ITreeVisualizationNode {
+  /** This node ID should be set automatically based on [evaluationContext]. */
+  val nodeID: Int?
   override val children: MutableList<IEvalNode>
   val evaluationContext: EvaluationContext
   val emissions: MutableList<IEmission>
@@ -40,10 +43,11 @@ internal class OrgaEvalNode(
   val content: String
 ): IEvalNode {
 
+  override val nodeID: Int? = null
   override val emissions: MutableList<IEmission> = mutableListOf()
 
   override fun getTVNContent(): String {
-    return "ORGA $content<BR/>"
+    return "ORGA $content"
   }
 
   override fun getTVNColors(): Pair<String, String>? = Pair("black", "gray")
@@ -73,18 +77,18 @@ internal class EvalNode(
   var annotation: String? = null
 ): IEvalNodeWithEvaluable {
 
+  override val nodeID: Int? = if (evaluable !is Term<*>) evaluationContext.constraintIDGenerator.generateID() else null
+
   override fun getTVNContent(): String {
-    val line1 = "EVALUATE <B>${evaluable::class.simpleName}  </B> @ $evaluatedTickIndex<BR/>"
-    val line2 = if (tickPrecondition == null) "" else "TickPrecond: ${tickPrecondition.toHTMLString()}<BR/>"
-    var assertionLines = ""
+    val annotationStr = if (annotation == null) "" else "<TR><TD COLSPAN=\"3\"><I>$annotation</I></TD></TR>"
+    val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
+            "${tickPrecondition.toHTMLString()}</TD></TR>"
+    var emissionsStr = ""
     emissions.forEach {
-      val content = it.str()
-      if (content.isNotEmpty()) {
-        assertionLines += "${content}<BR/>"
-      }
+      emissionsStr += it.tableStr()
     }
-    val annotation_ = if (annotation == null) "" else "<I>$annotation</I>"
-    return line1 + line2 + assertionLines + annotation_
+    val rows = annotationStr + tickPrecondStr + emissionsStr
+    return getTVNTableString(nodeID, "EVAL @ $evaluatedTickIndex", evaluable::class.simpleName!!, rows)
   }
 
 }
@@ -107,22 +111,22 @@ internal class WitnessEvalNode(
   var annotation: String? = null
 ) : IEvalNodeWithEvaluable {
 
+  override val nodeID: Int = evaluationContext.constraintIDGenerator.generateID()
+
   init {
     interval.check()
   }
 
   override fun getTVNContent(): String {
-    val line1 = "WITNESS <B>${evaluable::class.simpleName}  </B> in ${interval.str()}<BR/>"
-    val line2 = if (tickPrecondition == null) "" else "TickPrecond: ${tickPrecondition.toHTMLString()}<BR/>"
-    var assertionLines = ""
+    val annotationStr = if (annotation == null) "" else "<TR><TD COLSPAN=\"3\"><I>$annotation</I></TD></TR>"
+    val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
+            "${tickPrecondition.toHTMLString()}</TD></TR>"
+    var emissionsStr = ""
     emissions.forEach {
-      val content = it.str()
-      if (content.isNotEmpty()) {
-        assertionLines += "${content}<BR/>"
-      }
+      emissionsStr += it.tableStr()
     }
-    val annotation_ = if (annotation == null) "" else "<I>$annotation</I>"
-    return line1 + line2 + assertionLines + annotation_
+    val rows = annotationStr + tickPrecondStr + emissionsStr
+    return getTVNTableString(nodeID, "WTNS in ${interval.str()}", evaluable::class.simpleName!!, rows)
   }
 
 }
@@ -140,41 +144,39 @@ internal class VarIntroNode(
   /** Defines which tick is evaluated. */
   val evaluatedTickIndex: Int,
   /** Defines which interval is evaluated. */
-  val evaluatedInterval: Pair<Int, Int>?,
-  formulaHoldsVariable: String,
-  subFormulaHoldsVariable: String,
+  val evaluatedInterval: Pair<Int, Int>?
 ): IEvalNode {
 
+  override val nodeID: Int = evaluationContext.constraintIDGenerator.generateID()
+
+  /**
+   * The emissions of [VarIntroNode] are automatically generated (with IDs from [evaluationContext]) and contain the
+   * following emissions:
+   * - [NewInstanceEmission] with [emittedID]
+   * - [ConstrainIDEmission] with [emittedID] and [assertedID]
+   * - [EvalInIntervalConstraintEmission] with [emittedID] and [evaluatedInterval] or
+   * - [EvalAtTickConstraintEmission] with [emittedID] and [evaluatedTickIndex]
+   */
   override val emissions = mutableListOf<IEmission>()
 
   init {
-    emissions.add(NewInstanceEmission(emittedID))
-    emissions.add(NewInstanceEmission(subFormulaHoldsVariable, true))
-    val subFormulaHoldsVariable1 = "subFormulaHolds_${evaluationContext.evaluationIDGenerator.generateID()}"
-    val subFormulaHoldsVariable2 = "subFormulaHolds_${evaluationContext.evaluationIDGenerator.generateID()}"
-    emissions.add(NewInstanceEmission(subFormulaHoldsVariable1, true))
-    emissions.add(NewInstanceEmission(subFormulaHoldsVariable2, true))
-    emissions.add(ConstrainIDEmission(emittedID, assertedID, subFormulaHoldsVariable1))
+    val cIDGenerator = evaluationContext.constraintIDGenerator
+    emissions.add(NewInstanceEmission(null, emittedID))
+    emissions.add(ConstrainIDEmission(cIDGenerator.generateID(), emittedID, assertedID))
     if (evaluatedInterval != null) {
       evaluatedInterval.check()
-      emissions.add(EvalInIntervalConstraintEmission(emittedID, evaluatedInterval, subFormulaHoldsVariable2))
+      emissions.add(EvalInIntervalConstraintEmission(cIDGenerator.generateID(), emittedID, evaluatedInterval))
     } else {
-      emissions.add(EvalAtTickConstraintEmission(emittedID, evaluatedTickIndex, subFormulaHoldsVariable2))
+      emissions.add(EvalAtTickConstraintEmission(cIDGenerator.generateID(), emittedID, evaluatedTickIndex))
     }
-    emissions.add(SubFormulaeHoldEmission(formulaHoldsVariable,
-      listOf(subFormulaHoldsVariable, subFormulaHoldsVariable1, subFormulaHoldsVariable2)))
   }
 
   override fun getTVNContent(): String {
-    val line1 = "VAR_INTRO $referenceCCB<BR/>"
-    var assertionLines = ""
+    var emissionsStr = ""
     emissions.forEach {
-      val content = it.str()
-      if (content.isNotEmpty()) {
-        assertionLines += "${content}<BR/>"
-      }
+      emissionsStr += it.tableStr()
     }
-    return line1 + assertionLines
+    return getTVNTableString(nodeID, "VAR_INTRO for $referenceCCB", emissionsStr)
   }
 
 }
@@ -198,21 +200,39 @@ internal class UniversalEvalNode(
   val rightBorderOfInterval: Int?
 ) : IEvalNode {
 
+  override val nodeID: Int = evaluationContext.constraintIDGenerator.generateID()
   override val children: MutableList<IEvalNode> = mutableListOf()
   override val emissions: MutableList<IEmission> = mutableListOf()
 
   override fun getTVNContent(): String {
+    val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
+            "${tickPrecondition.toHTMLString()}</TD></TR>"
     val rightIntervalStr = if (rightBorderOfInterval == null) "∞)" else "$rightBorderOfInterval]"
-    val line1 = "UNIV_INST <B>${evaluable::class.simpleName}  </B> for [$evaluatedTickIndex,$rightIntervalStr<BR/>"
-    val line2 = if (tickPrecondition == null) "" else "TickPrecond: ${tickPrecondition.toHTMLString()}<BR/>"
-    var assertionLines = ""
-    emissions.forEach {
-      val content = it.str()
-      if (content.isNotEmpty()) {
-        assertionLines += "${content}<BR/>"
-      }
-    }
-    return line1 + line2 + assertionLines
+    val intervalStr = "[$evaluatedTickIndex,$rightIntervalStr"
+    return getTVNTableString(nodeID, "UNIV in $intervalStr", evaluable::class.simpleName!!, tickPrecondStr)
   }
 
+}
+
+private fun getTVNTableString(nodeID: Int?, modeStr: String, titleStr: String, rows: String) : String {
+  val nodeIDRow = if (nodeID != null) "<TD BGCOLOR=\"lightgray\">$nodeID</TD>" else ""
+  val colSpan = if (nodeID == null) "COLSPAN=\"2\" " else ""
+  return "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">" +
+          "<TR>" +
+            nodeIDRow +
+            "<TD ${colSpan}BGCOLOR=\"lightgray\">$modeStr</TD>" +
+            "<TD BGCOLOR=\"lightgray\"><B>$titleStr</B></TD>" +
+          "</TR>" +
+          rows +
+          "</TABLE>"
+}
+
+private fun getTVNTableString(nodeID: Int, titleStr: String, rows: String) : String {
+  return "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">" +
+          "<TR>" +
+          "<TD BGCOLOR=\"lightgray\">$nodeID</TD>" +
+          "<TD COLSPAN=\"2\" BGCOLOR=\"lightgray\">$titleStr</TD>" +
+          "</TR>" +
+          rows +
+          "</TABLE>"
 }

@@ -4,7 +4,10 @@ import de.moritzhank.cmftbl.smt.solver.dsl.CCB
 
 /** Contains information that are needed during the translation process of [IEvalNode]s. */
 internal class EvaluationContext(
+  /** This ID generator is used for introduced variables closely related to the formula. */
   val evaluationIDGenerator: EvaluationIDGenerator,
+  /** This ID generator is used for IDs of emissions and nodes. */
+  val constraintIDGenerator: EvaluationIDGenerator,
   val previouslyBoundCallContexts: Map<CCB<*>, String>,
   val previouslyIntroducedVariables: Map<CCB<*>, VarIntroNode>,
   val previouslyAssignedIDs: Map<CCB<*>, Int>
@@ -32,6 +35,7 @@ internal class EvaluationContext(
     }
     return EvaluationContext(
       evaluationIDGenerator,
+      constraintIDGenerator,
       copiedPreviouslyBoundCallContexts,
       copiedPreviouslyIntroducedVariables,
       copiedPreviouslyAssignedIDs

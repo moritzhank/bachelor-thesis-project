@@ -27,11 +27,12 @@ private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
 }
 
 private val test = formula { v: CCB<Vehicle> ->
-  next(Pair(1, 3)) {
-    binding(term(v * Vehicle::lane)) { l ->
-      term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)
-    }.apply { ccb.debugInfo = "l" } impl (term(v * Vehicle::lane * Lane::laneId) ne const(10))
-  }
+  binding(term(v * Vehicle::lane)) { l ->
+    next(Pair(1, 3)) {
+      (term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)) impl
+              (term(v * Vehicle::lane * Lane::laneId) ne const(10))
+    }
+  }.apply { ccb.debugInfo = "l" }
 }
 
 fun main() {

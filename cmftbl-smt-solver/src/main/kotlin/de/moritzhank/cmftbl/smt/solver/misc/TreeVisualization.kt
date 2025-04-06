@@ -38,7 +38,7 @@ interface ITreeVisualizationNode {
 fun ITreeVisualizationNode.generateGraphvizCode(): String {
   val result = StringBuilder()
   result.append("digraph G {")
-  result.append("node [shape=box];")
+  result.append("node [shape=plaintext];")
   val queue =
       ArrayDeque<Pair<Int, ITreeVisualizationNode>>().apply {
         add(Pair(0, this@generateGraphvizCode))

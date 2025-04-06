@@ -9,11 +9,10 @@ import de.moritzhank.cmftbl.smt.solver.translation.formula.EvalNode
 import de.moritzhank.cmftbl.smt.solver.translation.formula.EvaluationContext
 import de.moritzhank.cmftbl.smt.solver.translation.formula.EvaluationTickPrecondition
 import de.moritzhank.cmftbl.smt.solver.translation.formula.EvaluationType
-import de.moritzhank.cmftbl.smt.solver.translation.formula.FormulaFromChildrenEmission
+import de.moritzhank.cmftbl.smt.solver.translation.formula.FormulaeFromChildrenEmission
 import de.moritzhank.cmftbl.smt.solver.translation.formula.IEmission
 import de.moritzhank.cmftbl.smt.solver.translation.formula.IEvalNode
 import de.moritzhank.cmftbl.smt.solver.translation.formula.IEvalNodeWithEvaluable
-import de.moritzhank.cmftbl.smt.solver.translation.formula.NewInstanceEmission
 import de.moritzhank.cmftbl.smt.solver.translation.formula.UniversalEvalNode
 import de.moritzhank.cmftbl.smt.solver.translation.formula.WitnessEvalNode
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generateEvaluation
@@ -26,8 +25,7 @@ internal fun generateEvaluationForLogicConnective(
   evalType: EvaluationType,
   evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
-  evalTickPrecond: EvaluationTickPrecondition?,
-  subFormulaHoldsVariable: String
+  evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
   if (evalType == EvaluationType.UNIV_INST) {
     return UniversalEvalNode(evalContext, formula, evalTickIndex, evalTickPrecond, evalInterval?.second)
@@ -35,22 +33,17 @@ internal fun generateEvaluationForLogicConnective(
   if (formula is Neg) {
     error("Evaluating Neg is not available yet.")
   }
-  val emissions = mutableListOf<IEmission>()
-  val subFormulaHoldsLhs = "subFormulaHolds_${evalContext.evaluationIDGenerator.generateID()}"
-  val subFormulaHoldsRhs = "subFormulaHolds_${evalContext.evaluationIDGenerator.generateID()}"
-  emissions.add(NewInstanceEmission(subFormulaHoldsLhs, true))
-  emissions.add(NewInstanceEmission(subFormulaHoldsRhs, true))
-  val lhs = generateEvaluation(formula.lhs(), evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond,
-    subFormulaHoldsLhs)
-  val rhs = generateEvaluation(formula.rhs(), evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond,
-    subFormulaHoldsRhs)
-  val emission = FormulaFromChildrenEmission(formula, lhs as IEvalNodeWithEvaluable, rhs as IEvalNodeWithEvaluable,
-    subFormulaHoldsVariable, subFormulaHoldsLhs, subFormulaHoldsRhs)
-  emissions.add(emission)
-  return if (evalType == EvaluationType.EVALUATE) {
-    EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, formula, evalTickIndex, evalTickPrecond)
+  val resultNode = if (evalType == EvaluationType.EVALUATE) {
+    EvalNode(mutableListOf(), evalContext, mutableListOf(), formula, evalTickIndex, evalTickPrecond)
   } else {
     require(evalType == EvaluationType.WITNESS)
-    WitnessEvalNode(mutableListOf(lhs, rhs), evalContext, emissions, formula, evalInterval, evalTickPrecond)
+    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), formula, evalInterval, evalTickPrecond)
   }
+  val newEmissionID = evalContext.constraintIDGenerator.generateID()
+  val lhs = generateEvaluation(formula.lhs(), evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+  val rhs = generateEvaluation(formula.rhs(), evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+  resultNode.children.addAll(listOf(lhs, rhs))
+  resultNode.emissions.add(FormulaeFromChildrenEmission(newEmissionID, formula, lhs as IEvalNodeWithEvaluable,
+    rhs as IEvalNodeWithEvaluable))
+  return resultNode
 }

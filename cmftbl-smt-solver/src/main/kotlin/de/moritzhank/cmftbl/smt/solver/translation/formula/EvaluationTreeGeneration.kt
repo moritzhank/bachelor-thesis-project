@@ -46,20 +46,15 @@ internal fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuil
   name: String,
   ticks: Array<Double>
 ) : IEvalNode {
-  val evalCtx = EvaluationContext(EvaluationIDGenerator(), mapOf(), mapOf(), mapOf())
+  val evalCtx = EvaluationContext(EvaluationIDGenerator(), EvaluationIDGenerator(), mapOf(), mapOf(), mapOf())
   val ccb = CCB<T>(kClass).apply { debugInfo = name }
-  val ccbSMTName = "variable_${evalCtx.evaluationIDGenerator.generateID()}"
+  val ccbSMTName = "inst${evalCtx.evaluationIDGenerator.generateID()}"
   val formula = this(ccb).getPhi().first()
 
   // Generate VarIntroNode
-  val formulaHolds = "subFormulaHolds_${evalCtx.evaluationIDGenerator.generateID()}"
-  val subFormulaHolds = "subFormulaHolds_${evalCtx.evaluationIDGenerator.generateID()}"
-
-  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null, formulaHolds, subFormulaHolds)
-  varIntroNode.emissions.add(1, NewInstanceEmission(formulaHolds, true))
+  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null)
   val newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb to varIntroNode, newAssignedID = ccb to holdsFor.id)
-  varIntroNode.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null,
-    subFormulaHolds))
+  varIntroNode.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null))
   eliminateUniversalQuantification(varIntroNode, ticks)
   return varIntroNode
 }
@@ -71,25 +66,22 @@ internal fun generateEvaluation(
   evalType: EvaluationType,
   evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
-  evalTickPrecondition: EvaluationTickPrecondition?,
-  subFormulaHoldsVariable: String
+  evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
   return when (formula) {
     is EvaluableRelation<*> -> {
       generateEvaluationForEvaluableRelation(formula, evalCtx, evalType, evalTickIndex, evalInterval,
-        evalTickPrecondition, subFormulaHoldsVariable)
+        evalTickPrecondition)
     }
     is Binding<*> -> {
-      generateEvaluationForBinding(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition,
-        subFormulaHoldsVariable)
+      generateEvaluationForBinding(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
     }
     is LogicalConnectiveFormula  -> {
       generateEvaluationForLogicConnective(formula, evalCtx, evalType, evalTickIndex, evalInterval,
-        evalTickPrecondition, subFormulaHoldsVariable)
+        evalTickPrecondition)
     }
     is Next -> {
-      generateEvaluationForNext(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition,
-        subFormulaHoldsVariable)
+      generateEvaluationForNext(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
     }
     /*
     is Until -> {

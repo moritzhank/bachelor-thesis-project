@@ -11,39 +11,28 @@ internal fun generateEvaluationForNext(
   evalType: EvaluationType,
   evalTickIndex: Int,
   evalInterval: Pair<Int, Int>?,
-  evalTickPrecond: EvaluationTickPrecondition?,
-  subFormulaHoldsVariable: String
+  evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
-  println(subFormulaHoldsVariable)
   return when (evalType) {
     EvaluationType.EVALUATE -> {
       require(evalTickPrecond == null) {
         "The generation of until with present tick precondition is not available yet."
       }
-
+      val newEmissionID = { evalCtx.constraintIDGenerator.generateID() }
       // Prepare result node
       val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), formula, evalTickIndex, evalTickPrecond)
-      val usedUnboundVars = getUsedUnboundVariables(formula.inner, evalCtx)
-      val tickWitness = if (usedUnboundVars.isEmpty()) {
-        null
-      } else {
-        "tickWitness_${evalCtx.evaluationIDGenerator.generateID()}"
-      }
-      if (tickWitness != null) {
-        resultNode.emissions.add(NewInstanceEmission(tickWitness))
-      }
+      val newEmissionIDs = arrayOf(newEmissionID(), newEmissionID())
+      resultNode.emissions.add(NextTickExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex, formula.interval))
 
-      // Generate VarIntroNodes for rhs
+      // Generate VarIntroNodes
+      val usedUnboundVars = getUsedUnboundVariables(formula.inner, evalCtx)
       val varIntroNodes = mutableListOf<VarIntroNode>()
       var lastEvalCtx = evalCtx
-      var lastSubFormulaHolds = subFormulaHoldsVariable
       usedUnboundVars.forEach {
-        val newSubFormulaHoldsVariable = "subFormulaHolds_${evalCtx.evaluationIDGenerator.generateID()}"
-        val newVarName = "vinst_${lastEvalCtx.evaluationIDGenerator.generateID()}"
-        val varID = lastEvalCtx.previouslyAssignedIDs[it]!!
-        val newVarIntroNode = VarIntroNode(mutableListOf(), lastEvalCtx, newVarName, it, varID, evalTickIndex,
-          formula.interval, lastSubFormulaHolds, newSubFormulaHoldsVariable)
-        lastSubFormulaHolds = newSubFormulaHoldsVariable
+        val newVarName = "inst${lastEvalCtx.evaluationIDGenerator.generateID()}"
+        val assertedID = lastEvalCtx.previouslyAssignedIDs[it]!!
+        val newVarIntroNode = VarIntroNode(mutableListOf(), lastEvalCtx, newVarName, it, assertedID, evalTickIndex + 1,
+          null)
         varIntroNodes.add(newVarIntroNode)
         lastEvalCtx = lastEvalCtx.copy(newIntroducedVariable = it to newVarIntroNode)
       }
@@ -58,17 +47,13 @@ internal fun generateEvaluationForNext(
         lastNode = varIntroNodes.last()
       }
 
-      // Evaluate rhs
-      val rhs = generateEvaluation(formula.inner, lastEvalCtx, EvaluationType.WITNESS, evalTickIndex, formula.interval,
-        evalTickPrecond, lastSubFormulaHolds)
-      lastNode.children.add(rhs)
-      /*
-      if (tickWitness != null) {
-        // Add [TickWitnessTimeEmission] to right child node of until TODO
-        resultNode.children[1].emissions.add(TickWitnessTimeEmission(varIntroNodes.first().emittedID, tickWitness,
-          "TEST"))
-      }
-       */
+      // Evaluate inner
+      val inner = generateEvaluation(formula.inner, lastEvalCtx, EvaluationType.EVALUATE, evalTickIndex + 1,
+        null, evalTickPrecond)
+      lastNode.children.add(inner)
+
+      resultNode.emissions.add(FormulaFromChildrenEmission(newEmissionIDs[1], formula.inner,
+        inner as IEvalNodeWithEvaluable))
 
       resultNode
     }
