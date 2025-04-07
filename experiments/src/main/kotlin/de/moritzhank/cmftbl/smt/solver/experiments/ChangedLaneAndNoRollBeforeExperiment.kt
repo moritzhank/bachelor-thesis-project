@@ -18,21 +18,10 @@ private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
   until(Pair(1, 2)) {
     term(v * Vehicle::rotation * Rotation::roll) lt const(1.5)
     binding(term(v * Vehicle::lane)) { l ->
-      next {
         (term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)) and
                 (term(v * Vehicle::lane * Lane::road * Road::id) eq term(l * Lane::road * Road::id))
-      }
     }.apply { ccb.debugInfo = "l" }
   }
-}
-
-private val test = formula { v: CCB<Vehicle> ->
-  binding(term(v * Vehicle::lane)) { l ->
-    next(Pair(1, 3)) {
-      (term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)) impl
-              (term(v * Vehicle::lane * Lane::laneId) ne const(10))
-    }
-  }.apply { ccb.debugInfo = "l" }
 }
 
 fun main() {
@@ -43,8 +32,8 @@ fun main() {
   val vehicleID = 49
   val ticks = seg.tickData.map { it.currentTick.tickSeconds }.toTypedArray()
 
-  renderLatexFormula(formulaToLatex(test(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
-  val graphViz = test.generateVisualization(emptyVehicle(id = vehicleID), "v", ticks).generateGraphvizCode()
+  renderLatexFormula(formulaToLatex(changesLaneAndNoRollBefore(CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" })))
+  val graphViz = changesLaneAndNoRollBefore.generateVisualization(emptyVehicle(id = vehicleID), "v", ticks).generateGraphvizCode()
   renderTree(graphViz)
 
   /*

@@ -8,6 +8,7 @@ import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEv
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForEvaluableRelation
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForLogicConnective
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForNextPrevious
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForUntilSince
 import tools.aqua.stars.core.types.EntityType
 import kotlin.reflect.KClass
 
@@ -68,6 +69,9 @@ internal fun generateEvaluation(
   evalInterval: Pair<Int, Int>?,
   evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
+  if (evalType == EvaluationType.UNIV_INST) {
+    return UniversalEvalNode(evalCtx, formula, evalTickIndex, evalTickPrecondition, evalInterval?.second)
+  }
   return when (formula) {
     is EvaluableRelation<*> -> {
       generateEvaluationForEvaluableRelation(formula, evalCtx, evalType, evalTickIndex, evalInterval,
@@ -83,12 +87,9 @@ internal fun generateEvaluation(
     is NextPreviousFormula -> {
       generateEvaluationForNextPrevious(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
     }
-    /*
-    is Until -> {
-      generateEvaluationForUntil(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition,
-        subFormulaHoldsVariable)
+    is UntilSinceFormula -> {
+      generateEvaluationForUntilSince(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
     }
-     */
     else -> error("The generation is not yet available for the formula type \"${formula::class.simpleName}\".")
   }
 }

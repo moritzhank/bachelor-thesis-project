@@ -25,11 +25,14 @@ internal sealed interface IEmission {
 
 /** Represents the emission of a new instance (that is a constant function in SMT-Lib) with the id [newInstanceID]. */
 internal class NewInstanceEmission(
-  override val emissionID: Int?,
   val newInstanceID: String,
   val isBool: Boolean = false,
   override val annotation: String? = null
-): IEmission
+): IEmission {
+
+  override val emissionID: Int? = null
+
+}
 
 /** Constrains [tools.aqua.stars.core.types.EntityType.id] of [VarIntroNode]'s introduced variable to [id]. */
 internal class ConstrainIDEmission(
@@ -169,7 +172,7 @@ private fun termToString(node: IEvalNodeWithEvaluable): String {
   val evaluable = node.evaluable
   require(evaluable is Term<*>)
   var replaceBaseWith: String? = if (evaluable is Variable<*>) {
-    node.evaluationContext.getSmtID(evaluable.callContext.base())
+    node.evalCtx.getSmtID(evaluable.callContext.base())
   } else {
     null
   }

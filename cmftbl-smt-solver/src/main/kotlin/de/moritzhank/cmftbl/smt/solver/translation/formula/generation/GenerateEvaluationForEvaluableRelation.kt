@@ -12,9 +12,6 @@ internal fun generateEvaluationForEvaluableRelation(
   evalInterval: Pair<Int, Int>?,
   evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
-  if (evalType == EvaluationType.UNIV_INST) {
-    return UniversalEvalNode(evalContext, evaluableRelation, evalTickIndex, evalTickPrecondition, evalInterval?.second)
-  }
   val resultNode = if (evalType == EvaluationType.EVALUATE) {
     EvalNode(mutableListOf(), evalContext, mutableListOf(), evaluableRelation, evalTickIndex, evalTickPrecondition)
   } else {

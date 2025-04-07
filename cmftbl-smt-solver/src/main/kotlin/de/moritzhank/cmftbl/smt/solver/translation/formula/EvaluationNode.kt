@@ -1,19 +1,15 @@
 package de.moritzhank.cmftbl.smt.solver.translation.formula
 
-import de.moritzhank.cmftbl.smt.solver.dsl.CCB
-import de.moritzhank.cmftbl.smt.solver.dsl.Evaluable
-import de.moritzhank.cmftbl.smt.solver.dsl.Formula
-import de.moritzhank.cmftbl.smt.solver.dsl.Term
-import de.moritzhank.cmftbl.smt.solver.dsl.str
+import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
 import de.moritzhank.cmftbl.smt.solver.misc.check
 
 /** Abstraction of the translation process of formula AST. */
 internal interface IEvalNode: ITreeVisualizationNode {
-  /** This node ID should be set automatically based on [evaluationContext]. */
+  /** This node ID should be set automatically based on [evalCtx]. */
   val nodeID: Int?
   override val children: MutableList<IEvalNode>
-  val evaluationContext: EvaluationContext
+  val evalCtx: EvaluationContext
   val emissions: MutableList<IEmission>
 
   /** Iterator that traverses the tree by breadth search.  */
@@ -39,7 +35,7 @@ internal interface IEvalNode: ITreeVisualizationNode {
 /** Node just for organisation. */
 internal class OrgaEvalNode(
   override val children: MutableList<IEvalNode>,
-  override val evaluationContext: EvaluationContext,
+  override val evalCtx: EvaluationContext,
   val content: String
 ): IEvalNode {
 
@@ -47,10 +43,12 @@ internal class OrgaEvalNode(
   override val emissions: MutableList<IEmission> = mutableListOf()
 
   override fun getTVNContent(): String {
-    return "ORGA $content"
+    return "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">" +
+            "<TR>" +
+            "<TD BGCOLOR=\"lightgray\">ORGA $content</TD>" +
+            "</TR>" +
+            "</TABLE>"
   }
-
-  override fun getTVNColors(): Pair<String, String>? = Pair("black", "gray")
 
 }
 
@@ -63,7 +61,7 @@ internal sealed interface IEvalNodeWithEvaluable: IEvalNode {
 /** Represents the evaluation of a formula or term at a fixed tick. */
 internal class EvalNode(
   override val children: MutableList<IEvalNode>,
-  override val evaluationContext: EvaluationContext,
+  override val evalCtx: EvaluationContext,
   override val emissions: MutableList<IEmission>,
   override val evaluable: Evaluable,
   /** Defines which tick is evaluated. */
@@ -74,10 +72,16 @@ internal class EvalNode(
    */
   val tickPrecondition: EvaluationTickPrecondition?,
   /** Purpose is the better readability of the tree. */
-  var annotation: String? = null
+  var annotation: String? = null,
+  /** If null, nothing happens. Overwrites with null if -1 or with the value otherwise. */
+  overwriteNodeID: Int? = null
 ): IEvalNodeWithEvaluable {
 
-  override val nodeID: Int? = if (evaluable !is Term<*>) evaluationContext.constraintIDGenerator.generateID() else null
+  override val nodeID: Int? = if (overwriteNodeID == null) {
+    if (evaluable !is Term<*>) evalCtx.genConstraintID() else null
+  } else {
+    overwriteNodeID.takeIf { it >= 0 }
+  }
 
   override fun getTVNContent(): String {
     val annotationStr = if (annotation == null) "" else "<TR><TD COLSPAN=\"3\"><I>$annotation</I></TD></TR>"
@@ -96,7 +100,7 @@ internal class EvalNode(
 /** Represents the evaluation of a formula or term in an interval in order to find a witness. */
 internal class WitnessEvalNode(
   override val children: MutableList<IEvalNode>,
-  override val evaluationContext: EvaluationContext,
+  override val evalCtx: EvaluationContext,
   override val emissions: MutableList<IEmission>,
   override val evaluable: Evaluable,
   /** Defines **relative** search "radius". */
@@ -108,10 +112,16 @@ internal class WitnessEvalNode(
    */
   val tickPrecondition: EvaluationTickPrecondition?,
   /** Purpose is the better readability of the tree. */
-  var annotation: String? = null
+  var annotation: String? = null,
+  /** If null, nothing happens. Overwrites with null if -1 or with the value otherwise. */
+  overwriteNodeID: Int? = null
 ) : IEvalNodeWithEvaluable {
 
-  override val nodeID: Int = evaluationContext.constraintIDGenerator.generateID()
+  override val nodeID: Int? = if (overwriteNodeID == null) {
+    if (evaluable !is Term<*>) evalCtx.genConstraintID() else null
+  } else {
+    overwriteNodeID.takeIf { it >= 0 }
+  }
 
   init {
     interval.check()
@@ -134,7 +144,7 @@ internal class WitnessEvalNode(
 /** Represents the introduction of a variable that is needed for the translation process but is not part of the AST. */
 internal class VarIntroNode(
   override val children: MutableList<IEvalNode>,
-  override val evaluationContext: EvaluationContext,
+  override val evalCtx: EvaluationContext,
   /** SMT-ID of the emitted variable. */
   val emittedID: String,
   /** Reference to the [CCB] the variable is based on. */
@@ -147,10 +157,10 @@ internal class VarIntroNode(
   val evaluatedInterval: Pair<Int, Int>?
 ): IEvalNode {
 
-  override val nodeID: Int = evaluationContext.constraintIDGenerator.generateID()
+  override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
 
   /**
-   * The emissions of [VarIntroNode] are automatically generated (with IDs from [evaluationContext]) and contain the
+   * The emissions of [VarIntroNode] are automatically generated (with IDs from [evalCtx]) and contain the
    * following emissions:
    * - [NewInstanceEmission] with [emittedID]
    * - [ConstrainIDEmission] with [emittedID] and [assertedID]
@@ -160,8 +170,8 @@ internal class VarIntroNode(
   override val emissions = mutableListOf<IEmission>()
 
   init {
-    val cIDGenerator = evaluationContext.constraintIDGenerator
-    emissions.add(NewInstanceEmission(null, emittedID))
+    val cIDGenerator = evalCtx.constraintIDGenerator
+    emissions.add(NewInstanceEmission(emittedID))
     emissions.add(ConstrainIDEmission(cIDGenerator.generateID(), emittedID, assertedID))
     if (evaluatedInterval != null) {
       evaluatedInterval.check()
@@ -183,7 +193,7 @@ internal class VarIntroNode(
 
 /** Is used as an intermediate step. */
 internal class UniversalEvalNode(
-  override val evaluationContext: EvaluationContext,
+  override val evalCtx: EvaluationContext,
   /** Reference to the formula. */
   val evaluable: Formula,
   /** Defines which tick is evaluated. */
@@ -200,7 +210,7 @@ internal class UniversalEvalNode(
   val rightBorderOfInterval: Int?
 ) : IEvalNode {
 
-  override val nodeID: Int = evaluationContext.constraintIDGenerator.generateID()
+  override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
   override val children: MutableList<IEvalNode> = mutableListOf()
   override val emissions: MutableList<IEmission> = mutableListOf()
 

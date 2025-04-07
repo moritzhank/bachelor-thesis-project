@@ -3,9 +3,15 @@
 package de.moritzhank.cmftbl.smt.solver.misc
 
 import java.io.File
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URLEncoder
 import java.util.UUID
+import kotlin.collections.ArrayDeque
+import kotlin.collections.Iterator
+import kotlin.collections.List
+import kotlin.collections.forEach
+import kotlin.collections.isNotEmpty
 
 interface ITreeVisualizationNode {
 
@@ -69,9 +75,18 @@ fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true) {
         }
       }
       .mkdir()
-  val encodedGraphviz = URLEncoder.encode(graphviz, "utf-8")
-  val url = URI("https://quickchart.io/graphviz?graph=$encodedGraphviz").toURL()
-  val imageData = url.readBytes()
+  val content = graphviz.replace("\"", "\\\"")
+  val jsonRequestBody = "{\"graph\": \"$content\",\"layout\": \"dot\",\"format\": \"svg\"}"
+  val url = URI("https://quickchart.io/graphviz").toURL()
+  val con = url.openConnection() as HttpURLConnection
+  con.requestMethod = "POST"
+  con.setRequestProperty("Content-Type", "application/json")
+  con.doOutput = true
+  OutputStreamWriter(con.outputStream).use {
+    it.write(jsonRequestBody)
+    it.flush()
+  }
+  val imageData = con.inputStream.readBytes()
   val imageFilePath = "$treeImgs${File.separator}${UUID.randomUUID()}.svg"
   File(imageFilePath).apply { writeBytes(imageData) }
 }

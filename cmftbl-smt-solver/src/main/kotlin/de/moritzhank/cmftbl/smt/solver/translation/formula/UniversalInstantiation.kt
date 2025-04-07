@@ -23,14 +23,14 @@ private fun instantiateUniversalQuantification(
   val currentTick = node.evaluatedTickIndex
   val ticksInInterval = getTicksInInterval(currentTick, ticks, node.rightBorderOfInterval)
   val instantiatedNodes = mutableListOf<IEvalNode>()
-  var evalCtx = node.evaluationContext
+  var evalCtx = node.evalCtx
   val usedUnboundVars =  getUsedUnboundVariables(node.evaluable , evalCtx)
   ticksInInterval.forEach {
     val evalTickIndex = it.first
     var firstVarIntroNode: VarIntroNode? = null
     var prevIntroNode: VarIntroNode? = null
     usedUnboundVars.forEach {
-      val emittedID = "uinst_${evalCtx.evaluationIDGenerator.generateID()}"
+      val emittedID = "inst${evalCtx.evaluationIDGenerator.generateID()}"
       val assignedID = evalCtx.previouslyAssignedIDs[it]!!
       val newVarIntroNode = VarIntroNode(mutableListOf() ,evalCtx, emittedID, it, assignedID, evalTickIndex, null)
       evalCtx = evalCtx.copy(newIntroducedVariable = it to newVarIntroNode)

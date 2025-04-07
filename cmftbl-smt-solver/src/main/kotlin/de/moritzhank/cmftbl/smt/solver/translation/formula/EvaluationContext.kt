@@ -13,6 +13,10 @@ internal class EvaluationContext(
   val previouslyAssignedIDs: Map<CCB<*>, Int>
 ) {
 
+  fun genEvalID() = evaluationIDGenerator.generateID()
+
+  fun genConstraintID() = constraintIDGenerator.generateID()
+
   fun copy(
     newBoundCallContext: Pair<CCB<*>, String>? = null,
     newIntroducedVariable: Pair<CCB<*>, VarIntroNode>? = null,

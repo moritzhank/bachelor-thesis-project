@@ -27,9 +27,6 @@ internal fun generateEvaluationForLogicConnective(
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
-  if (evalType == EvaluationType.UNIV_INST) {
-    return UniversalEvalNode(evalContext, formula, evalTickIndex, evalTickPrecond, evalInterval?.second)
-  }
   if (formula is Neg) {
     error("Evaluating Neg is not available yet.")
   }

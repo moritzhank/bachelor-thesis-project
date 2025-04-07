@@ -18,13 +18,10 @@ internal fun <T> generateEvaluation(
   evalInterval: Pair<Int, Int>?,
 ): IEvalNode {
   val termStr = term.str((term as? Variable<*>)?.let { evalContext.getSmtID(it.callContext.base()) })
-  return when(evalType) {
-    EvaluationType.EVALUATE -> {
-      EvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalTickIndex, null, termStr)
-    }
-    EvaluationType.WITNESS -> {
-      WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalInterval, null, termStr)
-    }
-    EvaluationType.UNIV_INST -> error("This path should not be reached.")
+  return if (evalType == EvaluationType.EVALUATE) {
+    EvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalTickIndex, null, termStr)
+  } else {
+    require(evalType == EvaluationType.WITNESS)
+    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalInterval, null, termStr)
   }
 }
