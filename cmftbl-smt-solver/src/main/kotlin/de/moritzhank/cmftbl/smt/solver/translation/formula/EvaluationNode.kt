@@ -11,6 +11,12 @@ internal interface IEvalNode: ITreeVisualizationNode {
   override val children: MutableList<IEvalNode>
   val evalCtx: EvaluationContext
   val emissions: MutableList<IEmission>
+  /** The satisfiability of the child nodes is not mandatory for this node. */
+  var childSatNotRequired: Boolean
+
+  override fun getTVNEdgeStyle(): String? {
+    return if (childSatNotRequired) "dashed" else null
+  }
 
   /** Iterator that traverses the tree by breadth search.  */
   override fun iterator() = object : Iterator<IEvalNode> {
@@ -41,6 +47,7 @@ internal class OrgaEvalNode(
 
   override val nodeID: Int? = null
   override val emissions: MutableList<IEmission> = mutableListOf()
+  override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
     return "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">" +
@@ -82,6 +89,7 @@ internal class EvalNode(
   } else {
     overwriteNodeID.takeIf { it >= 0 }
   }
+  override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
     val annotationStr = if (annotation == null) "" else "<TR><TD COLSPAN=\"3\"><I>$annotation</I></TD></TR>"
@@ -122,6 +130,7 @@ internal class WitnessEvalNode(
   } else {
     overwriteNodeID.takeIf { it >= 0 }
   }
+  override var childSatNotRequired = false
 
   init {
     interval.check()
@@ -169,6 +178,8 @@ internal class VarIntroNode(
    */
   override val emissions = mutableListOf<IEmission>()
 
+  override var childSatNotRequired = false
+
   init {
     val cIDGenerator = evalCtx.constraintIDGenerator
     emissions.add(NewInstanceEmission(emittedID))
@@ -213,6 +224,7 @@ internal class UniversalEvalNode(
   override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
   override val children: MutableList<IEvalNode> = mutableListOf()
   override val emissions: MutableList<IEmission> = mutableListOf()
+  override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
     val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +

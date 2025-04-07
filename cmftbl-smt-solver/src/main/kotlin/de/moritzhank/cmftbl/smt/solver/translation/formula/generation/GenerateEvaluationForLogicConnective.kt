@@ -38,7 +38,9 @@ internal fun generateEvaluationForLogicConnective(
   }
   val newEmissionID = evalContext.constraintIDGenerator.generateID()
   val lhs = generateEvaluation(formula.lhs(), evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+  lhs.childSatNotRequired = true
   val rhs = generateEvaluation(formula.rhs(), evalContext, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+  rhs.childSatNotRequired = true
   resultNode.children.addAll(listOf(lhs, rhs))
   resultNode.emissions.add(FormulaeFromChildrenEmission(newEmissionID, formula, lhs as IEvalNodeWithEvaluable,
     rhs as IEvalNodeWithEvaluable))

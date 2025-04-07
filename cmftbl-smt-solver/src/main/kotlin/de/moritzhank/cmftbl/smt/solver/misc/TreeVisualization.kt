@@ -19,6 +19,8 @@ interface ITreeVisualizationNode {
 
   fun getTVNColors(): Pair<String, String>? = null
 
+  fun getTVNEdgeStyle(): String? = null
+
   val children: List<ITreeVisualizationNode>
 
   /** Iterator that traverses the tree by breadth search.  */
@@ -58,7 +60,9 @@ fun ITreeVisualizationNode.generateGraphvizCode(): String {
     node.second.children.forEach {
       val childID = nextId++
       queue.add(Pair(childID, it))
-      result.append("n${node.first} -> n$childID;")
+      val edgeStyle = it.getTVNEdgeStyle()
+      val edgeStyleStr = if (edgeStyle == null) "" else " [style=\"$edgeStyle\"]"
+      result.append("n${node.first} -> n$childID$edgeStyleStr;")
     }
   }
   result.append("}")
