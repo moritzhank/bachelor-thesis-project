@@ -7,7 +7,7 @@ import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForBinding
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForEvaluableRelation
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForLogicConnective
-import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForNext
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForNextPrevious
 import tools.aqua.stars.core.types.EntityType
 import kotlin.reflect.KClass
 
@@ -80,8 +80,8 @@ internal fun generateEvaluation(
       generateEvaluationForLogicConnective(formula, evalCtx, evalType, evalTickIndex, evalInterval,
         evalTickPrecondition)
     }
-    is Next -> {
-      generateEvaluationForNext(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
+    is NextPreviousFormula -> {
+      generateEvaluationForNextPrevious(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
     }
     /*
     is Until -> {

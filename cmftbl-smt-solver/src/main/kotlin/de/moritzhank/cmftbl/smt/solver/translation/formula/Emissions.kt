@@ -113,10 +113,11 @@ internal class TickWitnessTimeEmission(
 ): IEmission
 
 /** Represents the emission that checks if the tick with [tickIndex] exists in [interval]. */
-internal class NextTickExistsInIntervalEmission(
+internal class TickIndexExistsInIntervalEmission(
   override val emissionID: Int?,
   val tickIndex: Int,
   val interval: Pair<Int, Int>?,
+  val backwards: Boolean,
   override val annotation: String? = null
 ): IEmission
 
@@ -156,8 +157,10 @@ internal fun IEmission.str(): String {
     }
     is FormulaFromChildrenEmission -> "eval(inner)"
     is TermFromChildrenEmission -> "${termToString(evalNode1)} ${operator.toHTMLString()} ${termToString(evalNode2)}"
-    is NextTickExistsInIntervalEmission -> {
-      "nextTick($tickIndex) ${Relation.Ne.toHTMLString()} -1 &and; time(nextTick($tickIndex)) in ${interval.str()}"
+    is TickIndexExistsInIntervalEmission -> {
+      val backwardsStr = if (backwards) "-" else ""
+      "indexToTick($tickIndex) ${Relation.Ne.toHTMLString()} -1 &and; time(indexToTick($tickIndex)) in " +
+              "$backwardsStr${interval.str()}"
     }
   } + annotationInParentheses
 }
