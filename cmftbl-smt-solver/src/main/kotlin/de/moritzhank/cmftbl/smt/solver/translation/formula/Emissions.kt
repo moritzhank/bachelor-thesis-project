@@ -136,6 +136,13 @@ internal class FormulaFromChildrenEmission(
 
 }
 
+/** Represents the emission that ensures that the time of this element is the same as [referenceID]. */
+internal class SameTimeEmission(
+  override val emissionID: Int?,
+  val referenceID: String,
+  override val annotation: String? = null
+) : IEmission
+
 /** Generate a String representation of [IEmission] suitable for visualization. */
 internal fun IEmission.tableStr(): String {
   return when(this) {
@@ -165,6 +172,8 @@ internal fun IEmission.str(): String {
       "indexToTick($tickIndex) ${Relation.Ne.toHTMLString()} -1 &and; time(indexToTick($tickIndex)) in " +
               "$backwardsStr${interval.str()}"
     }
+
+    is SameTimeEmission -> "tickTime(this) = tickTime($referenceID)"
   } + annotationInParentheses
 }
 

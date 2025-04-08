@@ -75,9 +75,26 @@ fun Number.isNegative(): Boolean {
   }
 }
 
-/** Check interval for correctness. */
+/** Check interval for correctness. TODO: Remove. */
 fun Pair<Int, Int>?.check() {
+  return
+}
+
+/** Mirror interval. Note: [-Int.MIN_VALUE, 0] = (-∞,0]. */
+fun Pair<Int, Int>?.mirror() : Pair<Int, Int>? {
+  return if (this == null)
+    Pair(-Int.MIN_VALUE, 0)
+  else if (this.first == Int.MIN_VALUE) {
+    null
+  } else {
+    Pair(-this.second, -this.first)
+  }
+}
+
+/** Check if interval is mirrored. */
+fun Pair<Int, Int>?.isMirrored() : Boolean {
   if (this == null)
-    return
-  require(this.second > this.first)
+    return false
+  else
+    return this.first < 0
 }

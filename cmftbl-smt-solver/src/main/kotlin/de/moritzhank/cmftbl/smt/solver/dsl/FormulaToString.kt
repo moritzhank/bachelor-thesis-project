@@ -66,4 +66,12 @@ fun CallContext<*, *>.str(tmp: String? = null, replaceBaseWith: String? = null):
   }
 }
 
-fun Pair<Int, Int>?.str(): String = if (this == null) "[0,∞)" else "[$first,$second]"
+fun Pair<Int, Int>?.str(): String = if (this == null) {
+  "[0,∞)"
+} else {
+  if (first == Int.MIN_VALUE) {
+    "(-∞,0]"
+  } else {
+    "[$first,$second]"
+  }
+}

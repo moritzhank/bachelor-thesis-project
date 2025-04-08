@@ -3,6 +3,7 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula.generation
 import de.moritzhank.cmftbl.smt.solver.dsl.EvaluableRelation
 import de.moritzhank.cmftbl.smt.solver.dsl.Next
 import de.moritzhank.cmftbl.smt.solver.dsl.NextPreviousFormula
+import de.moritzhank.cmftbl.smt.solver.misc.negate
 import de.moritzhank.cmftbl.smt.solver.translation.formula.*
 
 /** Generate an [IEvalNode] from a [EvaluableRelation]. */
@@ -29,36 +30,19 @@ internal fun generateEvaluationForNextPrevious(
         evalTickIndex + 1
       } else {
         resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex - 1,
-          formula.interval, true))
+          formula.interval.negate(), true))
         evalTickIndex - 1
       }
 
       // Generate VarIntroNodes
       val usedUnboundVars = getUsedUnboundVariables(formula.inner, evalCtx)
-      val varIntroNodes = mutableListOf<VarIntroNode>()
-      var lastEvalCtx = evalCtx
-      usedUnboundVars.forEach {
-        val newVarName = "inst${lastEvalCtx.evaluationIDGenerator.generateID()}"
-        val assertedID = lastEvalCtx.previouslyAssignedIDs[it]!!
-        val newVarIntroNode = VarIntroNode(mutableListOf(), lastEvalCtx, newVarName, it, assertedID, newEvalTickIndex,
-          null)
-        varIntroNodes.add(newVarIntroNode)
-        lastEvalCtx = lastEvalCtx.copy(newIntroducedVariable = it to newVarIntroNode)
-      }
-      varIntroNodes.forEachIndexed { i, node ->
-        if (i + 1 < varIntroNodes.size) {
-          node.children.add(varIntroNodes[i + 1])
-        }
-      }
-      var lastNode: IEvalNode = resultNode
-      if (varIntroNodes.isNotEmpty()) {
-        resultNode.children.add(varIntroNodes.first())
-        lastNode = varIntroNodes.last()
-      }
+      val genVarIntroNodes = generateVarIntroNodes(resultNode, usedUnboundVars, evalCtx, newEvalTickIndex, null, null)
+      val varIntroNodes = genVarIntroNodes.first
+      val lastNode = if (varIntroNodes.isEmpty()) resultNode else varIntroNodes.last()
+      val lastEvalCtx = genVarIntroNodes.second
 
       // Evaluate inner
-      val inner = generateEvaluation(formula.inner, lastEvalCtx, EvaluationType.EVALUATE, newEvalTickIndex, null,
-        evalTickPrecond)
+      val inner = generateEvaluation(formula.inner, lastEvalCtx, EvaluationType.EVALUATE, newEvalTickIndex, null, null)
       lastNode.children.add(inner)
 
       resultNode.emissions.add(FormulaFromChildrenEmission(newEmissionIDs[1], formula.inner,

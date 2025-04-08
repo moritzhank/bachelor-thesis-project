@@ -3,6 +3,8 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula
 import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
 import de.moritzhank.cmftbl.smt.solver.misc.check
+import de.moritzhank.cmftbl.smt.solver.misc.isMirrored
+import de.moritzhank.cmftbl.smt.solver.misc.isNegative
 
 /** Abstraction of the translation process of formula AST. */
 internal interface IEvalNode: ITreeVisualizationNode {
@@ -163,7 +165,14 @@ internal class VarIntroNode(
   /** Defines which tick is evaluated. */
   val evaluatedTickIndex: Int,
   /** Defines which interval is evaluated. */
-  val evaluatedInterval: Pair<Int, Int>?
+  val evaluatedInterval: Pair<Int, Int>?,
+  /**
+   * The precondition describes a constraint on the evaluated interval: precondition => phi.
+   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
+   */
+  val tickPrecondition: EvaluationTickPrecondition?,
+  /** Changes the emission of [EvalInIntervalConstraintEmission] and [EvalAtTickConstraintEmission]. */
+  val sameTimeAs: String?,
 ): IEvalNode {
 
   override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
@@ -174,30 +183,36 @@ internal class VarIntroNode(
    * - [NewInstanceEmission] with [emittedID]
    * - [ConstrainIDEmission] with [emittedID] and [assertedID]
    * - [EvalInIntervalConstraintEmission] with [emittedID] and [evaluatedInterval] or
-   * - [EvalAtTickConstraintEmission] with [emittedID] and [evaluatedTickIndex]
+   * - [EvalAtTickConstraintEmission] with [emittedID] and [evaluatedTickIndex] or
+   * - [SameTimeEmission] with [sameTimeAs]
    */
   override val emissions = mutableListOf<IEmission>()
 
   override var childSatNotRequired = false
 
   init {
-    val cIDGenerator = evalCtx.constraintIDGenerator
     emissions.add(NewInstanceEmission(emittedID))
-    emissions.add(ConstrainIDEmission(cIDGenerator.generateID(), emittedID, assertedID))
-    if (evaluatedInterval != null) {
-      evaluatedInterval.check()
-      emissions.add(EvalInIntervalConstraintEmission(cIDGenerator.generateID(), emittedID, evaluatedInterval))
+    emissions.add(ConstrainIDEmission(evalCtx.genConstraintID(), emittedID, assertedID))
+    if (sameTimeAs != null) {
+      emissions.add(SameTimeEmission(evalCtx.genConstraintID(), sameTimeAs))
     } else {
-      emissions.add(EvalAtTickConstraintEmission(cIDGenerator.generateID(), emittedID, evaluatedTickIndex))
+      if (evaluatedInterval != null) {
+        evaluatedInterval.check()
+        emissions.add(EvalInIntervalConstraintEmission(evalCtx.genConstraintID(), emittedID, evaluatedInterval))
+      } else {
+        emissions.add(EvalAtTickConstraintEmission(evalCtx.genConstraintID(), emittedID, evaluatedTickIndex))
+      }
     }
   }
 
   override fun getTVNContent(): String {
+    val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
+            "${tickPrecondition.toHTMLString()}</TD></TR>"
     var emissionsStr = ""
     emissions.forEach {
       emissionsStr += it.tableStr()
     }
-    return getTVNTableString(nodeID, "VAR_INTRO for $referenceCCB", emissionsStr)
+    return getTVNTableString(nodeID, "VAR_INTRO for $referenceCCB", tickPrecondStr + emissionsStr)
   }
 
 }
@@ -215,10 +230,10 @@ internal class UniversalEvalNode(
    */
   val tickPrecondition: EvaluationTickPrecondition?,
   /**
-   * This induces the largest tick that has to be instantiated and that possibly can be sat if the [tickPrecondition]
-   * allows this.
+   * This induces the largest (or smallest) tick that has to be instantiated and that possibly can be sat if the
+   * [tickPrecondition] allows this.
    */
-  val rightBorderOfInterval: Int?
+  val interval: Pair<Int, Int>?
 ) : IEvalNode {
 
   override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
@@ -227,10 +242,16 @@ internal class UniversalEvalNode(
   override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
+    // TODO tickPrecondition is wrong left border
     val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
             "${tickPrecondition.toHTMLString()}</TD></TR>"
-    val rightIntervalStr = if (rightBorderOfInterval == null) "∞)" else "$rightBorderOfInterval]"
-    val intervalStr = "[$evaluatedTickIndex,$rightIntervalStr"
+    val intervalStr = if (!interval.isMirrored()) {
+      val rightIntervalStr = if (interval == null) "∞)" else "${interval.second}]"
+      "[$evaluatedTickIndex,$rightIntervalStr"
+    } else {
+      val leftIntervalStr = if (interval == null) "(∞" else "${interval.first}]"
+      "$leftIntervalStr,$evaluatedTickIndex]"
+    }
     return getTVNTableString(nodeID, "UNIV in $intervalStr", evaluable::class.simpleName!!, tickPrecondStr)
   }
 
