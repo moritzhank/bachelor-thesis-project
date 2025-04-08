@@ -1,9 +1,13 @@
+@file:Suppress("MemberVisibilityCanBePrivate")
+
 package de.moritzhank.cmftbl.smt.solver.translation.formula
 
-import de.moritzhank.cmftbl.smt.solver.dsl.*
+import de.moritzhank.cmftbl.smt.solver.dsl.CCB
+import de.moritzhank.cmftbl.smt.solver.dsl.Evaluable
+import de.moritzhank.cmftbl.smt.solver.dsl.Formula
+import de.moritzhank.cmftbl.smt.solver.dsl.Term
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
-import de.moritzhank.cmftbl.smt.solver.misc.check
-import de.moritzhank.cmftbl.smt.solver.misc.isMirrored
+import de.moritzhank.cmftbl.smt.solver.misc.str
 
 /** Abstraction of the translation process of formula AST. */
 internal interface IEvalNode: ITreeVisualizationNode {
@@ -113,7 +117,7 @@ internal class WitnessEvalNode(
   override val emissions: MutableList<IEmission>,
   override val evaluable: Evaluable,
   /** Defines **relative** search "radius". */
-  val interval: Pair<Int, Int>?,
+  val interval: Pair<Double, Double>,
   /**
    * The precondition describes a constraint on the evaluated interval: precondition => phi.
    * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
@@ -132,10 +136,6 @@ internal class WitnessEvalNode(
     overwriteNodeID.takeIf { it >= 0 }
   }
   override var childSatNotRequired = false
-
-  init {
-    interval.check()
-  }
 
   override fun getTVNContent(): String {
     val annotationStr = if (annotation == null) "" else "<TR><TD COLSPAN=\"3\"><I>$annotation</I></TD></TR>"
@@ -164,7 +164,7 @@ internal class VarIntroNode(
   /** Defines which tick is evaluated. */
   val evaluatedTickIndex: Int,
   /** Defines which interval is evaluated. */
-  val evaluatedInterval: Pair<Int, Int>?,
+  val evaluatedInterval: Pair<Double, Double>?,
   /**
    * The precondition describes a constraint on the evaluated interval: precondition => phi.
    * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
@@ -196,7 +196,6 @@ internal class VarIntroNode(
       emissions.add(SameTimeEmission(evalCtx.genConstraintID(), sameTimeAs))
     } else {
       if (evaluatedInterval != null) {
-        evaluatedInterval.check()
         emissions.add(EvalInIntervalConstraintEmission(evalCtx.genConstraintID(), emittedID, evaluatedInterval))
       } else {
         emissions.add(EvalAtTickConstraintEmission(evalCtx.genConstraintID(), emittedID, evaluatedTickIndex))
@@ -232,7 +231,7 @@ internal class UniversalEvalNode(
    * This induces the largest (or smallest) tick that has to be instantiated and that possibly can be sat if the
    * [tickPrecondition] allows this.
    */
-  val interval: Pair<Int, Int>?
+  val interval: Pair<Double, Double>
 ) : IEvalNode {
 
   override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
@@ -243,16 +242,7 @@ internal class UniversalEvalNode(
   override fun getTVNContent(): String {
     val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
             "${tickPrecondition.toHTMLString()}</TD></TR>"
-
-    // TODO: Interval überarbeiten
-    val intervalStr = if (!interval.isMirrored()) {
-      val rightIntervalStr = if (interval == null) "∞)" else "${interval.second}]"
-      "[$evaluatedTickIndex,$rightIntervalStr"
-    } else {
-      val leftIntervalStr = if (interval == null) "(∞" else "${interval.first}]"
-      "$leftIntervalStr,$evaluatedTickIndex]"
-    }
-    return getTVNTableString(nodeID, "UNIV in $intervalStr", evaluable::class.simpleName!!, tickPrecondStr)
+    return getTVNTableString(nodeID, "UNIV in ${interval.str()}", evaluable::class.simpleName!!, tickPrecondStr)
   }
 
 }

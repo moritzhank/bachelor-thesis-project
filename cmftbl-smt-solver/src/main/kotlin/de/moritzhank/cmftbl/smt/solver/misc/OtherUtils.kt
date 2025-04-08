@@ -75,26 +75,30 @@ fun Number.isNegative(): Boolean {
   }
 }
 
-/** Check interval for correctness. TODO: Remove. */
-fun Pair<Int, Int>?.check() {
-  return
+/** Converts integer interval to double interval. */
+fun Pair<Int, Int>?.convert() : Pair<Double, Double> {
+  if (this == null) {
+    return Pair(0.0, Double.POSITIVE_INFINITY)
+  }
+  return Pair(first.toDouble(), second.toDouble())
 }
 
-/** Mirror interval. Note: [-Int.MIN_VALUE, 0] = (-∞,0]. */
-fun Pair<Int, Int>?.mirror() : Pair<Int, Int>? {
-  return if (this == null)
-    Pair(-Int.MIN_VALUE, 0)
-  else if (this.first == Int.MIN_VALUE) {
-    null
-  } else {
-    Pair(-this.second, -this.first)
-  }
+/** Mirror interval. Note: Double.NEGATIVE_INFINITY or Double.POSITIVE_INFINITY = -∞ or ∞. */
+fun Pair<Double, Double>.mirror() : Pair<Double, Double> {
+  val minus = { n: Double -> if (n == 0.0) 0.0 else -n }
+  val newFirst = if (second == Double.POSITIVE_INFINITY) Double.NEGATIVE_INFINITY else minus(second)
+  val newSecond = if (first == Double.NEGATIVE_INFINITY) Double.POSITIVE_INFINITY else minus(first)
+  return Pair(newFirst, newSecond)
 }
 
 /** Check if interval is mirrored. */
-fun Pair<Int, Int>?.isMirrored() : Boolean {
-  if (this == null)
-    return false
-  else
-    return this.first < 0
+fun Pair<Double, Double>.isMirrored() : Boolean {
+  return this.first < 0.0
+}
+
+/** Double interval to String. */
+fun Pair<Double, Double>.str(): String {
+  val left = if (first == Double.NEGATIVE_INFINITY) "(-∞" else "[$first"
+  val right = if (second == Double.POSITIVE_INFINITY) "∞)" else "$second]"
+  return "$left,$right"
 }

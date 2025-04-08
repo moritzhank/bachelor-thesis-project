@@ -9,14 +9,14 @@ internal fun generateEvaluationForBinding(
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
+  evalInterval: Pair<Double, Double>?,
   evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
   val resultingNode = if (evalType == EvaluationType.EVALUATE) {
     EvalNode(mutableListOf(), evalCtx, mutableListOf(), binding, evalTickIndex, evalTickPrecondition)
   } else {
     require(evalType == EvaluationType.WITNESS)
-    WitnessEvalNode(mutableListOf(), evalCtx, mutableListOf(), binding, evalInterval, evalTickPrecondition)
+    WitnessEvalNode(mutableListOf(), evalCtx, mutableListOf(), binding, evalInterval!!, evalTickPrecondition)
   }
   val newEmissionID = evalCtx.constraintIDGenerator.generateID()
   val boundVarID = "bndInst${evalCtx.evaluationIDGenerator.generateID()}"

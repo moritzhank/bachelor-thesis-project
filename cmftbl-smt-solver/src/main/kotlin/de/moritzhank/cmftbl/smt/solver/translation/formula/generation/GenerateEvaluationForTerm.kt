@@ -15,13 +15,13 @@ internal fun <T> generateEvaluation(
   evalContext: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
+  evalInterval: Pair<Double, Double>?,
 ): IEvalNode {
   val termStr = term.str((term as? Variable<*>)?.let { evalContext.getSmtID(it.callContext.base()) })
   return if (evalType == EvaluationType.EVALUATE) {
     EvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalTickIndex, null, termStr)
   } else {
     require(evalType == EvaluationType.WITNESS)
-    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalInterval, null, termStr)
+    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalInterval!!, null, termStr)
   }
 }

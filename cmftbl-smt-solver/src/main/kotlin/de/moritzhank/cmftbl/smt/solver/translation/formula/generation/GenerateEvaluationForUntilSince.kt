@@ -3,6 +3,7 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula.generation
 import de.moritzhank.cmftbl.smt.solver.dsl.Relation
 import de.moritzhank.cmftbl.smt.solver.dsl.Until
 import de.moritzhank.cmftbl.smt.solver.dsl.UntilSinceFormula
+import de.moritzhank.cmftbl.smt.solver.misc.convert
 import de.moritzhank.cmftbl.smt.solver.misc.mirror
 import de.moritzhank.cmftbl.smt.solver.translation.formula.*
 
@@ -12,7 +13,7 @@ internal fun generateEvaluationForUntilSince(
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
+  evalInterval: Pair<Double, Double>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
   val newEmissionID = evalCtx.constraintIDGenerator.generateID()
@@ -36,7 +37,7 @@ internal fun generateEvaluationForUntilSince(
     // Evaluate lhs
     val relation = if (formula is Until) Relation.Lt else Relation.Gt
     val tickPreconditionLhs = if (tickWitness == null) null else EvaluationTickPrecondition(tickWitness, relation)
-    val interval = if (tickWitness == null) formula.interval else formula.interval.mirror()
+    val interval = if (tickWitness == null) formula.interval.convert() else formula.interval.convert().mirror()
     val lhs = generateEvaluation(formula.lhs, evalCtx, EvaluationType.UNIV_INST, evalTickIndex, interval,
       tickPreconditionLhs)
     resultNode.children.add(lhs)

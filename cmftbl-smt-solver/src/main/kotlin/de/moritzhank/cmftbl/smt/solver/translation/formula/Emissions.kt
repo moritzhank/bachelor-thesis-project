@@ -13,7 +13,7 @@ import de.moritzhank.cmftbl.smt.solver.dsl.Relation
 import de.moritzhank.cmftbl.smt.solver.dsl.Term
 import de.moritzhank.cmftbl.smt.solver.dsl.Variable
 import de.moritzhank.cmftbl.smt.solver.dsl.str
-import de.moritzhank.cmftbl.smt.solver.misc.check
+import de.moritzhank.cmftbl.smt.solver.misc.str
 
 /** Represents an emission of an [IEvalNode]. */
 internal sealed interface IEmission {
@@ -57,15 +57,9 @@ internal class EvalAtTickConstraintEmission(
 internal class EvalInIntervalConstraintEmission(
   override val emissionID: Int?,
   val variableID: String,
-  val interval: Pair<Int, Int>?,
+  val interval: Pair<Double, Double>,
   override val annotation: String? = null
-): IEmission {
-
-  init {
-    interval.check()
-  }
-
-}
+): IEmission
 
 /** Represents an emission that is specific to the evaluated node and depends on the terms of the child nodes. */
 internal class TermFromChildrenEmission(
@@ -85,8 +79,8 @@ internal class TermFromChildrenEmission(
 internal class FormulaeFromChildrenEmission(
   override val emissionID: Int?,
   val formula: LogicalConnectiveFormula,
-  val evalNode1: IEvalNodeWithEvaluable,
-  val evalNode2: IEvalNodeWithEvaluable,
+  evalNode1: IEvalNodeWithEvaluable,
+  evalNode2: IEvalNodeWithEvaluable,
   override val annotation: String? = null,
 ): IEmission {
 
@@ -119,7 +113,7 @@ internal class TickWitnessTimeEmission(
 internal class TickIndexExistsInIntervalEmission(
   override val emissionID: Int?,
   val tickIndex: Int,
-  val interval: Pair<Int, Int>?,
+  val interval: Pair<Double, Double>,
   val backwards: Boolean,
   override val annotation: String? = null
 ): IEmission
@@ -128,7 +122,7 @@ internal class TickIndexExistsInIntervalEmission(
 internal class FormulaFromChildrenEmission(
   override val emissionID: Int?,
   val formula: Formula,
-  val evalNode1: IEvalNodeWithEvaluable,
+  evalNode1: IEvalNodeWithEvaluable,
   override val annotation: String? = null,
 ): IEmission {
 
@@ -172,7 +166,6 @@ internal fun IEmission.str(): String {
       "indexToTick($tickIndex) ${Relation.Ne.toHTMLString()} -1 &and; time(indexToTick($tickIndex)) in " +
               "$backwardsStr${interval.str()}"
     }
-
     is SameTimeEmission -> "tickTime(this) = tickTime($referenceID)"
   } + annotationInParentheses
 }
@@ -180,7 +173,7 @@ internal fun IEmission.str(): String {
 private fun termToString(node: IEvalNodeWithEvaluable): String {
   val evaluable = node.evaluable
   require(evaluable is Term<*>)
-  var replaceBaseWith: String? = if (evaluable is Variable<*>) {
+  val replaceBaseWith: String? = if (evaluable is Variable<*>) {
     node.evalCtx.getSmtID(evaluable.callContext.base())
   } else {
     null

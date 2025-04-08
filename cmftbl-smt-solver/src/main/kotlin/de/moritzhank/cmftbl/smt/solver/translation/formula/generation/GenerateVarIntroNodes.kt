@@ -12,7 +12,7 @@ internal fun generateVarIntroNodes(
   usedUnboundVars: Set<CCB<*>>,
   evalCtx: EvaluationContext,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
+  evalInterval: Pair<Double, Double>?,
   evalTickPrecondition: EvaluationTickPrecondition?
 ): Pair<List<VarIntroNode>, EvaluationContext> {
   val varIntroNodes = mutableListOf<VarIntroNode>()

@@ -3,8 +3,8 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula.generation
 import de.moritzhank.cmftbl.smt.solver.dsl.EvaluableRelation
 import de.moritzhank.cmftbl.smt.solver.dsl.Next
 import de.moritzhank.cmftbl.smt.solver.dsl.NextPreviousFormula
+import de.moritzhank.cmftbl.smt.solver.misc.convert
 import de.moritzhank.cmftbl.smt.solver.misc.mirror
-import de.moritzhank.cmftbl.smt.solver.misc.negate
 import de.moritzhank.cmftbl.smt.solver.translation.formula.*
 
 /** Generate an [IEvalNode] from a [EvaluableRelation]. */
@@ -13,7 +13,7 @@ internal fun generateEvaluationForNextPrevious(
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
+  evalInterval: Pair<Double, Double>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
   return when (evalType) {
@@ -27,11 +27,11 @@ internal fun generateEvaluationForNextPrevious(
       val newEmissionIDs = arrayOf(newEmissionID(), newEmissionID())
       val newEvalTickIndex = if (formula is Next) {
         resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex + 1,
-          formula.interval, false))
+          formula.interval.convert(), false))
         evalTickIndex + 1
       } else {
         resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex - 1,
-          formula.interval.mirror(), true))
+          formula.interval.convert().mirror(), true))
         evalTickIndex - 1
       }
 

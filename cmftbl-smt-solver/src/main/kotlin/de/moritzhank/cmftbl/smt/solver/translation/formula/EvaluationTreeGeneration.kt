@@ -134,11 +134,11 @@ internal fun generateEvaluation(
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
+  evalInterval: Pair<Double, Double>?,
   evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
   if (evalType == EvaluationType.UNIV_INST) {
-    return UniversalEvalNode(evalCtx, formula, evalTickIndex, evalTickPrecondition, evalInterval)
+    return UniversalEvalNode(evalCtx, formula, evalTickIndex, evalTickPrecondition, evalInterval!!)
   }
   return when (formula) {
     is EvaluableRelation<*> -> {

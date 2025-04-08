@@ -9,14 +9,14 @@ internal fun generateEvaluationForEvaluableRelation(
   evalContext: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
+  evalInterval: Pair<Double, Double>?,
   evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
   val resultNode = if (evalType == EvaluationType.EVALUATE) {
     EvalNode(mutableListOf(), evalContext, mutableListOf(), evaluableRelation, evalTickIndex, evalTickPrecondition)
   } else {
     require(evalType == EvaluationType.WITNESS)
-    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), evaluableRelation, evalInterval,
+    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), evaluableRelation, evalInterval!!,
       evalTickPrecondition)
   }
   val newEmissionID = evalContext.constraintIDGenerator.generateID()

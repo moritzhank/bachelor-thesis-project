@@ -3,9 +3,7 @@
 package de.moritzhank.cmftbl.smt.solver.translation.formula
 
 import de.moritzhank.cmftbl.smt.solver.misc.isMirrored
-import de.moritzhank.cmftbl.smt.solver.misc.isNegative
 import de.moritzhank.cmftbl.smt.solver.misc.mirror
-import de.moritzhank.cmftbl.smt.solver.misc.negate
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateVarIntroNodes
 
 /** Replaces all [UniversalEvalNode] with their respective instantiation. */
@@ -29,7 +27,7 @@ private fun instantiateUniversalQuantification(
   val currentTick = node.evaluatedTickIndex
   val ticksInInterval = getTicksInInterval(currentTick, ticks, node.interval)
   val instantiatedNodes = mutableListOf<IEvalNode>()
-  var evalCtx = node.evalCtx
+  val evalCtx = node.evalCtx
   val usedUnboundVars =  getUsedUnboundVariables(node.evaluable , evalCtx)
   ticksInInterval.forEach {
     val evalTickIndex = it.first
@@ -38,7 +36,7 @@ private fun instantiateUniversalQuantification(
     val varIntroNodes = genVarIntroNodes.first
     val lastEvalCtx = genVarIntroNodes.second
     val newTickPrecond = if (varIntroNodes.isEmpty()) node.tickPrecondition else null
-    var newNode = generateEvaluation(node.evaluable, lastEvalCtx, EvaluationType.EVALUATE, evalTickIndex, null,
+    val newNode = generateEvaluation(node.evaluable, lastEvalCtx, EvaluationType.EVALUATE, evalTickIndex, null,
       newTickPrecond)
     varIntroNodes.lastOrNull()?.children?.add(newNode)
     instantiatedNodes.add(varIntroNodes.firstOrNull() ?: newNode)
@@ -52,18 +50,17 @@ private fun instantiateUniversalQuantification(
 private fun getTicksInInterval(
   currentTick: Int,
   ticks: Array<Double>,
-  interval: Pair<Int, Int>?
+  interval: Pair<Double, Double>
 ): List<Pair<Int, Double>> {
   val listOfIndexedTicks = ticks.mapIndexed { index, tick -> Pair(index, tick) }.toMutableList()
   listOfIndexedTicks.removeIf {
     if (!interval.isMirrored()) {
       val tooSmall = it.second < ticks[currentTick]
-      val tooBig = if (interval == null) false else it.second > (ticks[currentTick] + interval.second)
+      val tooBig = if (interval.second == Double.POSITIVE_INFINITY) false else it.second > (ticks[currentTick] + interval.second)
       tooSmall || tooBig
     } else {
-      val interval = interval.mirror()
       val tooBig = it.second > ticks[currentTick]
-      val tooSmall = if (interval == null) false else it.second < (ticks[currentTick] - interval.second)
+      val tooSmall = if (interval.first == Double.NEGATIVE_INFINITY) false else it.second < (ticks[currentTick] + interval.first)
       tooSmall || tooBig
     }
   }
@@ -73,19 +70,15 @@ private fun getTicksInInterval(
 private fun testsForGetTicksInInterval() {
   val ticks = arrayOf(1.0, 2.0, 3.0, 4.0, 5.5)
   var result: List<Pair<Int, Double>>
-  result = getTicksInInterval(0, ticks, null)
+  result = getTicksInInterval(0, ticks, Pair(0.0, Double.POSITIVE_INFINITY))
   require("[(0, 1.0), (1, 2.0), (2, 3.0), (3, 4.0), (4, 5.5)]" == result.toString())
-  result = getTicksInInterval(2, ticks, null)
+  result = getTicksInInterval(2, ticks, Pair(0.0, Double.POSITIVE_INFINITY))
   require("[(2, 3.0), (3, 4.0), (4, 5.5)]" == result.toString())
-  result = getTicksInInterval(2, ticks, Pair(0, 1))
+  result = getTicksInInterval(2, ticks, Pair(0.0, 1.0))
   require("[(2, 3.0), (3, 4.0)]" == result.toString())
   // Mirrored intervals
-  result = getTicksInInterval(4, ticks, null.mirror())
+  result = getTicksInInterval(4, ticks, Pair(Double.NEGATIVE_INFINITY, 0.0))
   require("[(0, 1.0), (1, 2.0), (2, 3.0), (3, 4.0), (4, 5.5)]" == result.toString())
-  result = getTicksInInterval(3, ticks, Pair(0, 1).mirror())
+  result = getTicksInInterval(3, ticks, Pair(0.0, 1.0).mirror())
   require("[(2, 3.0), (3, 4.0)]" == result.toString())
-}
-
-fun main() {
-  testsForGetTicksInInterval()
 }
