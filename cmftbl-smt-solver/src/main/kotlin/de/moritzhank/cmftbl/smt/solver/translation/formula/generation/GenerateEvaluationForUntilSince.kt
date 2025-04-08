@@ -37,7 +37,7 @@ internal fun generateEvaluationForUntilSince(
     // Evaluate lhs
     val relation = if (formula is Until) Relation.Lt else Relation.Gt
     val tickPreconditionLhs = if (tickWitness == null) null else EvaluationTickPrecondition(tickWitness, relation)
-    val interval = if (tickWitness == null) formula.interval.convert() else formula.interval.convert().mirror()
+    val interval = if (formula is Until) formula.interval.convert() else formula.interval.convert().mirror()
     val lhs = generateEvaluation(formula.lhs, evalCtx, EvaluationType.UNIV_INST, evalTickIndex, interval,
       tickPreconditionLhs)
     resultNode.children.add(lhs)

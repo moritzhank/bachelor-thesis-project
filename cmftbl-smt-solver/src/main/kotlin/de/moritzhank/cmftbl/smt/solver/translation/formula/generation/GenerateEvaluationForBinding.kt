@@ -20,9 +20,9 @@ internal fun generateEvaluationForBinding(
   }
   val newEmissionID = evalCtx.constraintIDGenerator.generateID()
   val boundVarID = "bndInst${evalCtx.evaluationIDGenerator.generateID()}"
-  val evalTerm = generateEvaluation(binding.bindTerm, evalCtx, evalType, evalTickIndex, null) as IEvalNodeWithEvaluable
+  val evalTerm = generateEvaluation(binding.bindTerm, evalCtx, evalType, evalTickIndex, evalInterval) as IEvalNodeWithEvaluable
   val newEvalCtx = evalCtx.copy(newBoundCallContext = binding.ccb to boundVarID)
-  val evalNode = generateEvaluation(binding.inner, newEvalCtx, evalType, evalTickIndex, null, null)
+  val evalNode = generateEvaluation(binding.inner, newEvalCtx, evalType, evalTickIndex, evalInterval, null)
   resultingNode.children.addAll(listOf(evalTerm, evalNode))
   resultingNode.emissions.add(NewInstanceEmission(boundVarID))
   resultingNode.emissions.add(BindingTermFromChildEmission(newEmissionID, boundVarID, evalTerm))
