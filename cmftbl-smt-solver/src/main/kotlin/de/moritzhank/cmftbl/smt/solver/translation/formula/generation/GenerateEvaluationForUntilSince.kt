@@ -15,10 +15,10 @@ internal fun generateEvaluationForUntilSince(
   evalInterval: Pair<Int, Int>?,
   evalTickPrecond: EvaluationTickPrecondition?
 ): IEvalNode {
-  val newEmissionID = { evalCtx.constraintIDGenerator.generateID() }
+  val newEmissionID = evalCtx.constraintIDGenerator.generateID()
   return if (evalType == EvaluationType.EVALUATE) {
     require(evalTickPrecond == null) {
-      "The generation of until with present tick precondition is not available yet."
+      "The generation of until or since with present tick precondition is not available yet."
     }
 
     // Prepare result node
@@ -52,8 +52,8 @@ internal fun generateEvaluationForUntilSince(
     val rhs = generateEvaluation(formula.rhs, lastEvalCtx, EvaluationType.WITNESS, evalTickIndex, interval, null)
     lastNode.children.add(rhs)
     if (tickWitness != null) {
-      // Add [TickWitnessTimeEmission] to right child node of until
-      resultNode.children[1].emissions.add(TickWitnessTimeEmission(newEmissionID(), varIntroNodes.first().emittedID,
+      // Add [TickWitnessTimeEmission] to right child node of until or since
+      resultNode.children[1].emissions.add(TickWitnessTimeEmission(newEmissionID, varIntroNodes.first().emittedID,
         tickWitness))
     }
 

@@ -3,6 +3,7 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula.generation
 import de.moritzhank.cmftbl.smt.solver.dsl.EvaluableRelation
 import de.moritzhank.cmftbl.smt.solver.dsl.Next
 import de.moritzhank.cmftbl.smt.solver.dsl.NextPreviousFormula
+import de.moritzhank.cmftbl.smt.solver.misc.mirror
 import de.moritzhank.cmftbl.smt.solver.misc.negate
 import de.moritzhank.cmftbl.smt.solver.translation.formula.*
 
@@ -30,7 +31,7 @@ internal fun generateEvaluationForNextPrevious(
         evalTickIndex + 1
       } else {
         resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex - 1,
-          formula.interval.negate(), true))
+          formula.interval.mirror(), true))
         evalTickIndex - 1
       }
 

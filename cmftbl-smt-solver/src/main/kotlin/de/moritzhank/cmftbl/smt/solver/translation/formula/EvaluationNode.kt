@@ -4,7 +4,6 @@ import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
 import de.moritzhank.cmftbl.smt.solver.misc.check
 import de.moritzhank.cmftbl.smt.solver.misc.isMirrored
-import de.moritzhank.cmftbl.smt.solver.misc.isNegative
 
 /** Abstraction of the translation process of formula AST. */
 internal interface IEvalNode: ITreeVisualizationNode {
@@ -242,9 +241,10 @@ internal class UniversalEvalNode(
   override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
-    // TODO tickPrecondition is wrong left border
     val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
             "${tickPrecondition.toHTMLString()}</TD></TR>"
+
+    // TODO: Interval überarbeiten
     val intervalStr = if (!interval.isMirrored()) {
       val rightIntervalStr = if (interval == null) "∞)" else "${interval.second}]"
       "[$evaluatedTickIndex,$rightIntervalStr"
