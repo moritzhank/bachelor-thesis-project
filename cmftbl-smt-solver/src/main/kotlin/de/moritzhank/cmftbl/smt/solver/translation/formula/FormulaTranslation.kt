@@ -21,11 +21,9 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
         declareConsts.add(0, nodeID)
         nodeIDDeclared.add(nodeID)
       }
-      if (!node.childSatNotRequired) {
-        val childNodeIDsNotDeclared = node.children.mapNotNull { it.nodeID }.filter { !nodeIDDeclared.contains(it) }
-        declareConsts.addAll(childNodeIDsNotDeclared)
-        nodeIDDeclared.addAll(childNodeIDsNotDeclared)
-      }
+      val childNodeIDsNotDeclared = node.children.mapNotNull { it.nodeID }.filter { !nodeIDDeclared.contains(it) }
+      declareConsts.addAll(childNodeIDsNotDeclared)
+      nodeIDDeclared.addAll(childNodeIDsNotDeclared)
       for (holdVarID in declareConsts) {
         result.appendLine("(declare-const ${holdVar(holdVarID)} Bool)")
       }
@@ -106,7 +104,6 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
         }
         is FormulaeFromChildrenEmission -> {
           // TODO: CHECK
-          result.appendLine()
           val emitSmtID = holdVar(emission.emissionID!!)
           val opStr = logicalConnectiveSmtOperator(emission.formula)
           val firstPart = holdVar(emission.evalNode1.nodeID!!)

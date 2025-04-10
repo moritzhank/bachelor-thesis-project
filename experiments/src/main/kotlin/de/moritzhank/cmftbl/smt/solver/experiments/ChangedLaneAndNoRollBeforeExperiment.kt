@@ -9,6 +9,7 @@ import de.moritzhank.cmftbl.smt.solver.dsl.FormulaBuilder.Companion.formula
 import de.moritzhank.cmftbl.smt.solver.dsl.formulaToLatex
 import de.moritzhank.cmftbl.smt.solver.dsl.renderLatexFormula
 import de.moritzhank.cmftbl.smt.solver.dsl.times
+import de.moritzhank.cmftbl.smt.solver.generateSmtLibForSegment
 import de.moritzhank.cmftbl.smt.solver.misc.emptyVehicle
 import de.moritzhank.cmftbl.smt.solver.misc.generateGraphvizCode
 import de.moritzhank.cmftbl.smt.solver.misc.renderTree
@@ -43,8 +44,7 @@ fun main() {
   val graphViz = visualization.generateGraphvizCode()
   renderTree(graphViz)
 
-  //val dataSmtLib = generateSmtLibForSegment(seg, SmtSolver.YICES, "QF_LIRA")
-  val dataSmtLib = "(set-logic QF_LIRA)\n"
+  val dataSmtLib = generateSmtLibForSegment(seg, SmtSolver.YICES, "QF_LIRA")
   val formulaSmtLib = generateSmtLib(visualization)
 
   println(runSmtSolver("$dataSmtLib$formulaSmtLib", SmtSolver.YICES, false))
