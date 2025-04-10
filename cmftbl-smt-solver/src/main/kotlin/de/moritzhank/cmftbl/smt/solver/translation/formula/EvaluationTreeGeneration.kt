@@ -77,7 +77,7 @@ internal fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuil
   val formula = this(ccb).getPhi().first()
 
   // Generate VarIntroNode
-  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null, null, null)
+  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null, null, null, null)
   val newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb to varIntroNode, newAssignedID = ccb to holdsFor.id)
   varIntroNode.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null))
   eliminateUniversalQuantification(varIntroNode, ticks)
@@ -115,10 +115,10 @@ internal fun <T: EntityType<*, *, *, *, *>, U: EntityType<*, *, *, *, *>>
   val formula = this(ccb1, ccb2).getPhi().first()
 
   // Generate VarIntroNodes
-  val varIntroNode1 = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName1, ccb1, holdsFor1.id, 0, null, null, null)
+  val varIntroNode1 = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName1, ccb1, holdsFor1.id, 0, null, null, null, null)
   var newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb1 to varIntroNode1, newAssignedID = ccb1 to holdsFor1.id)
   val varIntroNode2 = VarIntroNode(mutableListOf(), newEvalCtx, ccbSMTName2, ccb2, holdsFor2.id, 0, null, null,
-    ccbSMTName1)
+    ccbSMTName1, ccb1)
   newEvalCtx = newEvalCtx.copy(newIntroducedVariable = ccb2 to varIntroNode2, newAssignedID = ccb2 to holdsFor2.id)
   varIntroNode1.children.add(varIntroNode2)
   varIntroNode2.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null))

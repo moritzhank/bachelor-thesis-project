@@ -19,15 +19,17 @@ internal fun generateVarIntroNodes(
   var lastEvalCtx = evalCtx
   var tickPrecondition = evalTickPrecondition
   var lastInstanceName: String? = null
+  var lastInstanceCCB: CCB<*>? = null
   usedUnboundVars.forEach {
     val newVarName = "inst${lastEvalCtx.evaluationIDGenerator.generateID()}"
     val assertedID = lastEvalCtx.previouslyAssignedIDs[it]!!
     val newVarIntroNode = VarIntroNode(mutableListOf(), lastEvalCtx, newVarName, it, assertedID, evalTickIndex,
-      evalInterval, tickPrecondition, lastInstanceName)
+      evalInterval, tickPrecondition, lastInstanceName, lastInstanceCCB)
     tickPrecondition = null
     varIntroNodes.add(newVarIntroNode)
     lastEvalCtx = lastEvalCtx.copy(newIntroducedVariable = it to newVarIntroNode)
     lastInstanceName = newVarName
+    lastInstanceCCB = it
   }
   varIntroNodes.forEachIndexed { i, node ->
     if (i + 1 < varIntroNodes.size) {

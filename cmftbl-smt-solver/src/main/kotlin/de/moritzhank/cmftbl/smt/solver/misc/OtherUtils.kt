@@ -52,6 +52,26 @@ fun <T> generateEqualsITEStructure(
   return iteStructureFront.toString()
 }
 
+/** Generate ITE-structure for SMT-LIB. */
+fun generateAssertStructure(
+  varID: String,
+  elements: Collection<String>,
+): String {
+  require(elements.isNotEmpty())
+  val elements = elements.toMutableList()
+  val lastElem = elements.removeLast()
+  if (elements.isEmpty()) {
+    return "(assert (= $varID $lastElem))"
+  } else {
+    val frontStructure = StringBuilder("")
+    elements.forEach { elem ->
+      frontStructure.append("$elem ")
+    }
+    frontStructure.append(lastElem)
+    return "(assert (= $varID (and $frontStructure)))"
+  }
+}
+
 /** Negate a number. */
 fun Number.negate(): Number {
   require(this != Int.MIN_VALUE) { "Int.MIN_VALUE cannot be negated." }

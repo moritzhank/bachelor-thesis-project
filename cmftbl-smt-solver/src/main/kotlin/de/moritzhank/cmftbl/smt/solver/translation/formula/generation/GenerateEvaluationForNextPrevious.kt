@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package de.moritzhank.cmftbl.smt.solver.translation.formula.generation
 
 import de.moritzhank.cmftbl.smt.solver.dsl.EvaluableRelation
@@ -24,14 +26,14 @@ internal fun generateEvaluationForNextPrevious(
       val newEmissionID = { evalCtx.constraintIDGenerator.generateID() }
       // Prepare result node
       val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), formula, evalTickIndex, evalTickPrecond)
-      val newEmissionIDs = arrayOf(newEmissionID(), newEmissionID())
+      val newEmissionIDs = arrayOf(newEmissionID())
       val newEvalTickIndex = if (formula is Next) {
-        resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex + 1,
-          formula.interval.convert(), false))
+        resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex + 1, evalTickIndex,
+          formula.interval.convert()))
         evalTickIndex + 1
       } else {
-        resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex - 1,
-          formula.interval.convert().mirror(), true))
+        resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex - 1, evalTickIndex,
+          formula.interval.convert().mirror()))
         evalTickIndex - 1
       }
 
@@ -46,8 +48,6 @@ internal fun generateEvaluationForNextPrevious(
       val inner = generateEvaluation(formula.inner, lastEvalCtx, EvaluationType.EVALUATE, newEvalTickIndex, null, null)
       lastNode.children.add(inner)
 
-      resultNode.emissions.add(FormulaFromChildrenEmission(newEmissionIDs[1], formula.inner,
-        inner as IEvalNodeWithEvaluable))
       resultNode
     }
     else -> error("Nested evaluations with Next are not supported yet.")

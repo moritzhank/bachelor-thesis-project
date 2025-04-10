@@ -53,16 +53,17 @@ fun ITreeVisualizationNode.generateGraphvizCode(): String {
       }
   var nextId = 1
   while (queue.isNotEmpty()) {
-    val node = queue.removeFirst()
-    val colorsOfNode = node.second.getTVNColors()
+    val entry = queue.removeFirst()
+    val node = entry.second
+    val colorsOfNode = node.getTVNColors()
     val colorAppendix = if (colorsOfNode == null) "" else ", color=${colorsOfNode.first}, fontcolor=${colorsOfNode.second}"
-    result.append("n${node.first} [label=<${node.second.getTVNContent()}>$colorAppendix];")
-    node.second.children.forEach {
+    result.append("n${entry.first} [label=<${node.getTVNContent()}>$colorAppendix];")
+    node.children.forEach {
       val childID = nextId++
       queue.add(Pair(childID, it))
-      val edgeStyle = it.getTVNEdgeStyle()
+      val edgeStyle = node.getTVNEdgeStyle()
       val edgeStyleStr = if (edgeStyle == null) "" else " [style=\"$edgeStyle\"]"
-      result.append("n${node.first} -> n$childID$edgeStyleStr;")
+      result.append("n${entry.first} -> n$childID$edgeStyleStr;")
     }
   }
   result.append("}")

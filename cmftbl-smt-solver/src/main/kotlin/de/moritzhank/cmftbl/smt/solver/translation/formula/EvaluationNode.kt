@@ -172,6 +172,7 @@ internal class VarIntroNode(
   val tickPrecondition: EvaluationTickPrecondition?,
   /** Changes the emission of [EvalInIntervalConstraintEmission] and [EvalAtTickConstraintEmission]. */
   val sameTimeAs: String?,
+  val sameTimeAsCCB: CCB<*>?
 ): IEvalNode {
 
   override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
@@ -183,7 +184,7 @@ internal class VarIntroNode(
    * - [ConstrainIDEmission] with [emittedID] and [assertedID]
    * - [EvalInIntervalConstraintEmission] with [emittedID] and [evaluatedInterval] or
    * - [EvalAtTickConstraintEmission] with [emittedID] and [evaluatedTickIndex] or
-   * - [SameTimeEmission] with [sameTimeAs]
+   * - [SameTimeEmission] with [sameTimeAs] and [sameTimeAsCCB]
    */
   override val emissions = mutableListOf<IEmission>()
 
@@ -193,7 +194,7 @@ internal class VarIntroNode(
     emissions.add(NewInstanceEmission(emittedID))
     emissions.add(ConstrainIDEmission(evalCtx.genConstraintID(), emittedID, assertedID))
     if (sameTimeAs != null) {
-      emissions.add(SameTimeEmission(evalCtx.genConstraintID(), sameTimeAs))
+      emissions.add(SameTimeEmission(evalCtx.genConstraintID(), sameTimeAs, sameTimeAsCCB!!))
     } else {
       if (evaluatedInterval != null) {
         emissions.add(EvalInIntervalConstraintEmission(evalCtx.genConstraintID(), emittedID, evaluatedInterval))

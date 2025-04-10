@@ -2,17 +2,7 @@
 
 package de.moritzhank.cmftbl.smt.solver.translation.formula
 
-import de.moritzhank.cmftbl.smt.solver.dsl.And
-import de.moritzhank.cmftbl.smt.solver.dsl.Formula
-import de.moritzhank.cmftbl.smt.solver.dsl.Iff
-import de.moritzhank.cmftbl.smt.solver.dsl.Implication
-import de.moritzhank.cmftbl.smt.solver.dsl.LogicalConnectiveFormula
-import de.moritzhank.cmftbl.smt.solver.dsl.Neg
-import de.moritzhank.cmftbl.smt.solver.dsl.Or
-import de.moritzhank.cmftbl.smt.solver.dsl.Relation
-import de.moritzhank.cmftbl.smt.solver.dsl.Term
-import de.moritzhank.cmftbl.smt.solver.dsl.Variable
-import de.moritzhank.cmftbl.smt.solver.dsl.str
+import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.str
 
 /** Represents an emission of an [IEvalNode]. */
@@ -79,8 +69,8 @@ internal class TermFromChildrenEmission(
 internal class FormulaeFromChildrenEmission(
   override val emissionID: Int?,
   val formula: LogicalConnectiveFormula,
-  evalNode1: IEvalNodeWithEvaluable,
-  evalNode2: IEvalNodeWithEvaluable,
+  val evalNode1: IEvalNodeWithEvaluable,
+  val evalNode2: IEvalNodeWithEvaluable,
   override val annotation: String? = null,
 ): IEmission {
 
@@ -113,27 +103,16 @@ internal class TickWitnessTimeEmission(
 internal class TickIndexExistsInIntervalEmission(
   override val emissionID: Int?,
   val tickIndex: Int,
+  val referenceTickIndex: Int,
   val interval: Pair<Double, Double>,
-  val backwards: Boolean,
   override val annotation: String? = null
 ): IEmission
-
-/** Represents an emission that is specific to the evaluated node and depends on the formula of the child node. */
-internal class FormulaFromChildrenEmission(
-  override val emissionID: Int?,
-  val formula: Formula,
-  evalNode1: IEvalNodeWithEvaluable,
-  override val annotation: String? = null,
-): IEmission {
-
-  val childFormula1 = evalNode1.evaluable as Formula
-
-}
 
 /** Represents the emission that ensures that the time of this element is the same as [referenceID]. */
 internal class SameTimeEmission(
   override val emissionID: Int?,
   val referenceID: String,
+  val referenceCCB: CCB<*>,
   override val annotation: String? = null
 ) : IEmission
 
@@ -159,12 +138,10 @@ internal fun IEmission.str(): String {
       val connectiveString = binaryLogicalConnectiveToString(formula)
       "eval(lhs) $connectiveString eval(rhs)"
     }
-    is FormulaFromChildrenEmission -> "eval(inner)"
     is TermFromChildrenEmission -> "${termToString(evalNode1)} ${operator.toHTMLString()} ${termToString(evalNode2)}"
     is TickIndexExistsInIntervalEmission -> {
-      val backwardsStr = if (backwards) "-" else ""
       "indexToTick($tickIndex) ${Relation.Ne.toHTMLString()} -1 &and; time(indexToTick($tickIndex)) in " +
-              "$backwardsStr${interval.str()}"
+              interval.str()
     }
     is SameTimeEmission -> "tickTime(this) = tickTime($referenceID)"
   } + annotationInParentheses
