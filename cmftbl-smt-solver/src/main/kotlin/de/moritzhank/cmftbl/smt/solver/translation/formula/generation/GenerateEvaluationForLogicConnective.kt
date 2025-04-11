@@ -14,17 +14,16 @@ internal fun generateEvaluationForLogicConnective(
   evalContext: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Double, Double>?,
-  evalTickPrecond: EvaluationTickPrecondition?
+  evalInterval: Pair<Double, Double>?
 ): IEvalNode {
   if (formula is Neg) {
     error("Evaluating Neg is not available yet.")
   }
   val resultNode = if (evalType == EvaluationType.EVALUATE) {
-    EvalNode(mutableListOf(), evalContext, mutableListOf(), formula, evalTickIndex, evalTickPrecond)
+    EvalNode(mutableListOf(), evalContext, mutableListOf(), formula, evalTickIndex)
   } else {
     require(evalType == EvaluationType.WITNESS)
-    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), formula, evalInterval!!, evalTickPrecond)
+    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), formula, evalInterval!!)
   }
 
   val newEmissionID = evalContext.constraintIDGenerator.generateID()

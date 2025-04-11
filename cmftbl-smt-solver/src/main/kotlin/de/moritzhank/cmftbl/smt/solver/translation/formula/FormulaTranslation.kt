@@ -125,12 +125,13 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
         holdVars.addAll(node.children.mapNotNull { it.nodeID }.map { holdVar(it) })
       }
       val holdVarStr = holdVar(nodeID)
-      if (node.tickPrecondition == null) {
-        result.appendLine("(assert (= holdVarStr ${generateAndStructure(holdVars)}))")
-      } else {
-        // TODO
-        val implicantStr = "${node.tickPrecondition?.toHTMLString()}"
+      if (node is VarIntroNode && node.tickPrecondition != null) {
+        val precond = node.tickPrecondition
+        val refStr = tickDataSeconds("(${node.referenceCCB.tickMemberName()} ${node.emittedID})")
+        val implicantStr = "(${precond.operation.toSMTString()} $refStr ${tickDataSeconds(precond.tickWitnessTimeID)})"
         result.appendLine("(assert (= $holdVarStr (=> $implicantStr ${generateAndStructure(holdVars)})))")
+      } else {
+        result.appendLine("(assert (= holdVarStr ${generateAndStructure(holdVars)}))")
       }
     }
   }

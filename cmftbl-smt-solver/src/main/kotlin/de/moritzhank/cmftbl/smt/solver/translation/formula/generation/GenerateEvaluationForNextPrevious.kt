@@ -15,17 +15,13 @@ internal fun generateEvaluationForNextPrevious(
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Double, Double>?,
-  evalTickPrecond: EvaluationTickPrecondition?
+  evalInterval: Pair<Double, Double>?
 ): IEvalNode {
   return when (evalType) {
     EvaluationType.EVALUATE -> {
-      require(evalTickPrecond == null) {
-        "The generation of until with present tick precondition is not available yet."
-      }
       val newEmissionID = { evalCtx.constraintIDGenerator.generateID() }
       // Prepare result node
-      val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), formula, evalTickIndex, evalTickPrecond)
+      val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), formula, evalTickIndex)
       val newEmissionIDs = arrayOf(newEmissionID())
       val newEvalTickIndex = if (formula is Next) {
         resultNode.emissions.add(TickIndexExistsInIntervalEmission(newEmissionIDs[0], evalTickIndex + 1, evalTickIndex,

@@ -19,9 +19,9 @@ internal fun <T> generateEvaluation(
 ): IEvalNode {
   val termStr = term.str((term as? Variable<*>)?.let { evalContext.getSmtID(it.callContext.base()) })
   return if (evalType == EvaluationType.EVALUATE) {
-    EvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalTickIndex, null, termStr)
+    EvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalTickIndex, termStr)
   } else {
     require(evalType == EvaluationType.WITNESS)
-    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalInterval!!, null, termStr)
+    WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), term, evalInterval!!, termStr)
   }
 }

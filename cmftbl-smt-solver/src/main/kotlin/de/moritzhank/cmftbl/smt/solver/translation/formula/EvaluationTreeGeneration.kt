@@ -140,23 +140,22 @@ internal fun generateEvaluation(
   if (evalType == EvaluationType.UNIV_INST) {
     return UniversalEvalNode(evalCtx, formula, evalTickIndex, evalTickPrecondition, evalInterval!!)
   }
+  require(evalTickPrecondition == null)
   return when (formula) {
     is EvaluableRelation<*> -> {
-      generateEvaluationForEvaluableRelation(formula, evalCtx, evalType, evalTickIndex, evalInterval,
-        evalTickPrecondition)
+      generateEvaluationForEvaluableRelation(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
     is Binding<*> -> {
-      generateEvaluationForBinding(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
+      generateEvaluationForBinding(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
     is LogicalConnectiveFormula  -> {
-      generateEvaluationForLogicConnective(formula, evalCtx, evalType, evalTickIndex, evalInterval,
-        evalTickPrecondition)
+      generateEvaluationForLogicConnective(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
     is NextPreviousFormula -> {
-      generateEvaluationForNextPrevious(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
+      generateEvaluationForNextPrevious(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
     is UntilSinceFormula -> {
-      generateEvaluationForUntilSince(formula, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecondition)
+      generateEvaluationForUntilSince(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
     else -> error("The generation is not yet available for the formula type \"${formula::class.simpleName}\".")
   }

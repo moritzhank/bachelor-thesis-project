@@ -16,11 +16,6 @@ internal interface IEvalNode: ITreeVisualizationNode {
   override val children: MutableList<IEvalNode>
   val evalCtx: EvaluationContext
   val emissions: MutableList<IEmission>
-  /**
-   * The precondition describes a constraint on the evaluated interval: precondition => phi.
-   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
-   */
-  val tickPrecondition: EvaluationTickPrecondition?
   /** The satisfiability of the child nodes is not mandatory for this node. */
   var childSatNotRequired: Boolean
 
@@ -57,7 +52,6 @@ internal class OrgaEvalNode(
 
   override val nodeID: Int? = evalCtx.genConstraintID()
   override val emissions: MutableList<IEmission> = mutableListOf()
-  override val tickPrecondition: EvaluationTickPrecondition? = null
   override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
@@ -85,7 +79,6 @@ internal class EvalNode(
   override val evaluable: Evaluable,
   /** Defines which tick is evaluated. */
   val evaluatedTickIndex: Int,
-  override val tickPrecondition: EvaluationTickPrecondition?,
   /** Purpose is the better readability of the tree. */
   var annotation: String? = null,
   /** If null, nothing happens. Overwrites with null if -1 or with the value otherwise. */
@@ -101,13 +94,11 @@ internal class EvalNode(
 
   override fun getTVNContent(): String {
     val annotationStr = if (annotation == null) "" else "<TR><TD COLSPAN=\"3\"><I>$annotation</I></TD></TR>"
-    val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
-            "${tickPrecondition.toHTMLString()}</TD></TR>"
     var emissionsStr = ""
     emissions.forEach {
       emissionsStr += it.tableStr()
     }
-    val rows = annotationStr + tickPrecondStr + emissionsStr
+    val rows = annotationStr + emissionsStr
     return getTVNTableString(nodeID, "EVAL @ $evaluatedTickIndex", evaluable::class.simpleName!!, rows)
   }
 
@@ -121,7 +112,6 @@ internal class WitnessEvalNode(
   override val evaluable: Evaluable,
   /** Defines **relative** search "radius". */
   val interval: Pair<Double, Double>,
-  override val tickPrecondition: EvaluationTickPrecondition?,
   /** Purpose is the better readability of the tree. */
   var annotation: String? = null,
   /** If null, nothing happens. Overwrites with null if -1 or with the value otherwise. */
@@ -137,13 +127,11 @@ internal class WitnessEvalNode(
 
   override fun getTVNContent(): String {
     val annotationStr = if (annotation == null) "" else "<TR><TD COLSPAN=\"3\"><I>$annotation</I></TD></TR>"
-    val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
-            "${tickPrecondition.toHTMLString()}</TD></TR>"
     var emissionsStr = ""
     emissions.forEach {
       emissionsStr += it.tableStr()
     }
-    val rows = annotationStr + tickPrecondStr + emissionsStr
+    val rows = annotationStr + emissionsStr
     return getTVNTableString(nodeID, "WTNS in ${interval.str()}", evaluable::class.simpleName!!, rows)
   }
 
@@ -163,7 +151,11 @@ internal class VarIntroNode(
   val evaluatedTickIndex: Int,
   /** Defines which interval is evaluated. */
   val evaluatedInterval: Pair<Double, Double>?,
-  override val tickPrecondition: EvaluationTickPrecondition?,
+  /**
+   * The precondition describes a constraint on the evaluated interval: precondition => phi.
+   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
+   */
+  val tickPrecondition: EvaluationTickPrecondition?,
   /** Changes the emission of [EvalInIntervalConstraintEmission] and [EvalAtTickConstraintEmission]. */
   val sameTimeAs: String?,
   val sameTimeAsCCB: CCB<*>?
@@ -217,11 +209,11 @@ internal class UniversalEvalNode(
   val evaluable: Formula,
   /** Defines which tick is evaluated. */
   val evaluatedTickIndex: Int,
-  override val tickPrecondition: EvaluationTickPrecondition?,
   /**
    * This induces the largest (or smallest) tick that has to be instantiated and that possibly can be sat if the
    * [tickPrecondition] allows this.
    */
+  val tickPrecondition: EvaluationTickPrecondition?,
   val interval: Pair<Double, Double>
 ) : IEvalNode {
 

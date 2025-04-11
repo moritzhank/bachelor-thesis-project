@@ -13,17 +13,12 @@ internal fun generateEvaluationForUntilSince(
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Double, Double>?,
-  evalTickPrecond: EvaluationTickPrecondition?
+  evalInterval: Pair<Double, Double>?
 ): IEvalNode {
   val newEmissionID = evalCtx.constraintIDGenerator.generateID()
   return if (evalType == EvaluationType.EVALUATE) {
-    require(evalTickPrecond == null) {
-      "The generation of until or since with present tick precondition is not available yet."
-    }
-
     // Prepare result node
-    val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), formula, evalTickIndex, evalTickPrecond)
+    val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), formula, evalTickIndex)
     val usedUnboundVarsRhs = getUsedUnboundVariables(formula.rhs, evalCtx)
     val tickWitness = if (usedUnboundVarsRhs.isEmpty()) {
       null
