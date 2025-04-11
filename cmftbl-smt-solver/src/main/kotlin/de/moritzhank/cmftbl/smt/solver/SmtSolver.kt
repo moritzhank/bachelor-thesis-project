@@ -57,12 +57,16 @@ fun runSmtSolver(
   val exitCode = proc.exitValue()
   // Has run into timeout/error of Yices2
   if (solver == SmtSolver.YICES && exitCode != 0) {
-    smt2File.delete()
+    if (removeSmt2File) {
+      smt2File.delete()
+    }
     return null
   }
   // Has run into timeout/error of CVC5
   if (solver == SmtSolver.CVC5 && exitCode != 0) {
-    smt2File.delete()
+    if (removeSmt2File) {
+      smt2File.delete()
+    }
     return null
   }
   require(exitCode == 0)

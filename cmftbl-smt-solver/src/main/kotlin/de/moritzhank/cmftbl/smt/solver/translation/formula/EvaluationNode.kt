@@ -16,6 +16,11 @@ internal interface IEvalNode: ITreeVisualizationNode {
   override val children: MutableList<IEvalNode>
   val evalCtx: EvaluationContext
   val emissions: MutableList<IEmission>
+  /**
+   * The precondition describes a constraint on the evaluated interval: precondition => phi.
+   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
+   */
+  val tickPrecondition: EvaluationTickPrecondition?
   /** The satisfiability of the child nodes is not mandatory for this node. */
   var childSatNotRequired: Boolean
 
@@ -50,13 +55,15 @@ internal class OrgaEvalNode(
   val content: String
 ): IEvalNode {
 
-  override val nodeID: Int? = null
+  override val nodeID: Int? = evalCtx.genConstraintID()
   override val emissions: MutableList<IEmission> = mutableListOf()
+  override val tickPrecondition: EvaluationTickPrecondition? = null
   override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
     return "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">" +
             "<TR>" +
+            "<TD BGCOLOR=\"lightgray\">$nodeID</TD>" +
             "<TD BGCOLOR=\"lightgray\">ORGA $content</TD>" +
             "</TR>" +
             "</TABLE>"
@@ -78,11 +85,7 @@ internal class EvalNode(
   override val evaluable: Evaluable,
   /** Defines which tick is evaluated. */
   val evaluatedTickIndex: Int,
-  /**
-   * The precondition describes a constraint on the evaluated interval: precondition => phi.
-   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
-   */
-  val tickPrecondition: EvaluationTickPrecondition?,
+  override val tickPrecondition: EvaluationTickPrecondition?,
   /** Purpose is the better readability of the tree. */
   var annotation: String? = null,
   /** If null, nothing happens. Overwrites with null if -1 or with the value otherwise. */
@@ -118,12 +121,7 @@ internal class WitnessEvalNode(
   override val evaluable: Evaluable,
   /** Defines **relative** search "radius". */
   val interval: Pair<Double, Double>,
-  /**
-   * The precondition describes a constraint on the evaluated interval: precondition => phi.
-   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
-   * Preconditions can occur in witness mode, for formulae like (phi1 until (phi2 until phi3))
-   */
-  val tickPrecondition: EvaluationTickPrecondition?,
+  override val tickPrecondition: EvaluationTickPrecondition?,
   /** Purpose is the better readability of the tree. */
   var annotation: String? = null,
   /** If null, nothing happens. Overwrites with null if -1 or with the value otherwise. */
@@ -165,11 +163,7 @@ internal class VarIntroNode(
   val evaluatedTickIndex: Int,
   /** Defines which interval is evaluated. */
   val evaluatedInterval: Pair<Double, Double>?,
-  /**
-   * The precondition describes a constraint on the evaluated interval: precondition => phi.
-   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
-   */
-  val tickPrecondition: EvaluationTickPrecondition?,
+  override val tickPrecondition: EvaluationTickPrecondition?,
   /** Changes the emission of [EvalInIntervalConstraintEmission] and [EvalAtTickConstraintEmission]. */
   val sameTimeAs: String?,
   val sameTimeAsCCB: CCB<*>?
@@ -223,11 +217,7 @@ internal class UniversalEvalNode(
   val evaluable: Formula,
   /** Defines which tick is evaluated. */
   val evaluatedTickIndex: Int,
-  /**
-   * The precondition describes a constraint on the evaluated interval: precon => phi.
-   * This is needed, because certain constraints on the evaluation interval are not known before the evaluation.
-   */
-  val tickPrecondition: EvaluationTickPrecondition?,
+  override val tickPrecondition: EvaluationTickPrecondition?,
   /**
    * This induces the largest (or smallest) tick that has to be instantiated and that possibly can be sat if the
    * [tickPrecondition] allows this.

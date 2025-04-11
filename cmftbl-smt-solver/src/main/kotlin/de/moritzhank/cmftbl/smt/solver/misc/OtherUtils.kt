@@ -53,22 +53,21 @@ fun <T> generateEqualsITEStructure(
 }
 
 /** Generate ITE-structure for SMT-LIB. */
-fun generateAssertStructure(
-  varID: String,
+fun generateAndStructure(
   elements: Collection<String>,
 ): String {
   require(elements.isNotEmpty())
   val elements = elements.toMutableList()
   val lastElem = elements.removeLast()
   if (elements.isEmpty()) {
-    return "(assert (= $varID $lastElem))"
+    return lastElem
   } else {
     val frontStructure = StringBuilder("")
     elements.forEach { elem ->
       frontStructure.append("$elem ")
     }
     frontStructure.append(lastElem)
-    return "(assert (= $varID (and $frontStructure)))"
+    return "(and $frontStructure)"
   }
 }
 

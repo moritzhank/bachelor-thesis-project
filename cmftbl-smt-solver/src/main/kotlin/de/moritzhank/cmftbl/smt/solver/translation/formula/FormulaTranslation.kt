@@ -12,6 +12,10 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
   val holdVar = { id: Int -> "holds$id" }
   val nodeIDDeclared = mutableSetOf<Int>()
   for (node in evalNode.iterator()) {
+    if (node.nodeID != null) {
+      result.appendLine()
+      result.appendLine("; Translate node ${node.nodeID}")
+    }
     // Declare holdVars
     val nodeID = node.nodeID
     val emissionHoldIDs = node.emissions.mapNotNull { it.emissionID }
@@ -120,7 +124,14 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
       if (!node.childSatNotRequired) {
         holdVars.addAll(node.children.mapNotNull { it.nodeID }.map { holdVar(it) })
       }
-      result.appendLine(generateAssertStructure(holdVar(nodeID), holdVars))
+      val holdVarStr = holdVar(nodeID)
+      if (node.tickPrecondition == null) {
+        result.appendLine("(assert (= holdVarStr ${generateAndStructure(holdVars)}))")
+      } else {
+        // TODO
+        val implicantStr = "${node.tickPrecondition?.toHTMLString()}"
+        result.appendLine("(assert (= $holdVarStr (=> $implicantStr ${generateAndStructure(holdVars)})))")
+      }
     }
   }
   result.appendLine("(assert ${holdVar(evalNodeID)})")
