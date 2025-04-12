@@ -60,6 +60,6 @@ fun main() {
   val dataSmtLib = generateSmtLibForSegment(seg, SmtSolver.Z3, "QF_LIRA")
   val formulaSmtLib = generateSmtLib(visualization)
 
-  println(runSmtSolver("$dataSmtLib$formulaSmtLib", SmtSolver.Z3, false, yicesTimeoutInSeconds = 999999999))
+  //println(runSmtSolver("$dataSmtLib$formulaSmtLib", SmtSolver.Z3, false, yicesTimeoutInSeconds = 999999999))
 
 }

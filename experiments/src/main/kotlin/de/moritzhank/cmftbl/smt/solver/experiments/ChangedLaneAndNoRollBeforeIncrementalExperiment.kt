@@ -9,12 +9,7 @@ import de.moritzhank.cmftbl.smt.solver.dsl.CCB
 import de.moritzhank.cmftbl.smt.solver.dsl.FormulaBuilder.Companion.formula
 import de.moritzhank.cmftbl.smt.solver.dsl.times
 import de.moritzhank.cmftbl.smt.solver.generateSmtLibForSegment
-import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
-import de.moritzhank.cmftbl.smt.solver.misc.MemoryProfiler
-import de.moritzhank.cmftbl.smt.solver.misc.avgWithoutInvalids
-import de.moritzhank.cmftbl.smt.solver.misc.emptyVehicle
-import de.moritzhank.cmftbl.smt.solver.misc.generateGraphvizCode
-import de.moritzhank.cmftbl.smt.solver.misc.renderTree
+import de.moritzhank.cmftbl.smt.solver.misc.*
 import de.moritzhank.cmftbl.smt.solver.scripts.LegendPosition
 import de.moritzhank.cmftbl.smt.solver.scripts.getDateTimeString
 import de.moritzhank.cmftbl.smt.solver.scripts.plotPerf
@@ -22,39 +17,32 @@ import de.moritzhank.cmftbl.smt.solver.smtSolverVersion
 import de.moritzhank.cmftbl.smt.solver.translation.formula.emitsSomething
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generateVisualization
 import tools.aqua.stars.data.av.dataclasses.*
+import java.io.File
 
-private val changedLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
-  binding(term(v * Vehicle::lane)) { l ->
-    until(Pair(1, 2)) {
-      term(v * Vehicle::rotation * Rotation::roll) lt const(1.5)
-      (term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)) and
-              (term(v * Vehicle::lane * Lane::road * Road::id) eq term(l * Lane::road * Road::id))
-    }
-  }.apply { ccb.debugInfo = "l" }
-}
-
-class ChangedLaneAndNoRollBeforeIncrementalSetup(
-  /** For information only. */
-  override val x: Int,
+private class ChangedLaneAndNoRollBeforeIncrementalSetup(
+  /** How many nodes do remain in [evalNode]. */
+  override val identifier: Int,
+  /** This specifies the segment for which [evalNode] is evaluated. */
   val segment: Segment,
+  /** This holds the sliced evaluation node tree. */
   val evalNode: ITreeVisualizationNode
 ) : PerfExperimentSetup {
 
-  override val overrideSmt2FileName: String? = "slicedExp_$x"
-
   override fun toString(): String {
-    return "ChangedLaneAndNoRollBeforeIncremental with EvaluationTree cut @ $x"
+    return "ChangedLaneAndNoRollBeforeIncremental with EvaluationTree cut @ $identifier"
   }
 
 }
 
-class ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int = 120):
-  PerfExperiment("ChangedLaneAndNoRollBeforeIncremental") {
+private class ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int = 120):
+  PerfExperiment<ChangedLaneAndNoRollBeforeIncrementalSetup>("ChangedLaneAndNoRollBeforeIncremental") {
 
   init {
     memoryProfilerSampleRateMs = 10
     useMemoryProfiler = useMemProfiler
     timeOutInSeconds = timeout
+    val fSep = File.separator
+    fileName = { expSetup -> "run${fSep}slicing_${expSetup.identifier}.smt2" }
   }
 
   override val memoryProfilerWorkingCond: (MemoryProfiler) -> Boolean = { memProfiler ->
@@ -64,16 +52,26 @@ class ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, 
   }
 
   override fun generateSmtLib(
-    exp: PerfExperimentSetup,
+    expSetup: ChangedLaneAndNoRollBeforeIncrementalSetup,
     solver: SmtSolver,
     logic: String
   ): String {
-    require(exp is ChangedLaneAndNoRollBeforeIncrementalSetup)
-    val dataSmtLib = generateSmtLibForSegment(exp.segment, solver, logic)
-    val formulaSmtLib = de.moritzhank.cmftbl.smt.solver.translation.formula.generateSmtLib(exp.evalNode)
+    val dataSmtLib = generateSmtLibForSegment(expSetup.segment, solver, logic)
+    val formulaSmtLib = de.moritzhank.cmftbl.smt.solver.translation.formula.generateSmtLib(expSetup.evalNode)
     return "$dataSmtLib$formulaSmtLib"
   }
 
+}
+
+/** Predicate */
+private val changedLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
+  binding(term(v * Vehicle::lane)) { l ->
+    until(Pair(1, 2)) {
+      term(v * Vehicle::rotation * Rotation::roll) lt const(1.5)
+      (term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)) and
+              (term(v * Vehicle::lane * Lane::road * Road::id) eq term(l * Lane::road * Road::id))
+    }
+  }.apply { ccb.debugInfo = "l" }
 }
 
 fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int = 120) {
@@ -96,16 +94,20 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
   for (i in 1 .. numberNodes) {
     listOfExperiments.add(ChangedLaneAndNoRollBeforeIncrementalSetup(i, segment, fullEvalNode.copyAndSlice(i)))
   }
+  val runID = getDateTimeString('-', '-', "-", false)
+  val runDir = ChangedLaneAndNoRollBeforeIncrementalTest().getRunDirectoryPath(runID)
+  File(runDir).mkdirs()
 
-  // View EvalNodeTrees
-  println("Slicing ...")
+  // Generate visualization
+  print("Generating visualization for sliced formulae ...")
   for (exp in listOfExperiments) {
-    val tmp = fullEvalNode.copyAndSlice(exp.x)
-    renderTree(tmp.generateGraphvizCode(), false, "slicing_${exp.x}")
+    val tmp = fullEvalNode.copyAndSlice(exp.identifier)
+    val svgFileName = "slicing_${exp.identifier}"
+    val path = "$runDir${File.separator}$svgFileName.svg"
+    renderTree(tmp.generateGraphvizCode(), path)
   }
-  println("Finished ...")
+  println(" Finished")
 
-  /*
   // YICES
   val yicesVersion = smtSolverVersion(SmtSolver.YICES)
   val resYices = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).runExperiment(
@@ -115,11 +117,10 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     1,
     "#44B7C2",
     "Yices v$yicesVersion",
+    runID,
     resTimeSLambda,
-    resMaxSolverMemUsageGBLambda,
-    false
+    resMaxSolverMemUsageGBLambda
   )
-   */
 
   // Z3
   val z3Version = smtSolverVersion(SmtSolver.Z3)
@@ -130,11 +131,11 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     1,
     "#034B7B",
     "Z3 v$z3Version",
+    runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
   )
 
-  /*
   // CVC5
   val cvc5Version = smtSolverVersion(SmtSolver.CVC5)
   val resCVC5 = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).runExperiment(
@@ -144,17 +145,17 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     1,
     "#808080",
     "CVC5 v$cvc5Version",
+    runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
   )
-   */
 
-  val outputFile = "${ChangedLaneAndNoRollBeforeIncrementalTest().expFolderPath}/graph_${getDateTimeString()}.png"
-  plotPerf(resZ3, title = "ChangedLaneAndNoRollBefore incremental test", xLabel = "Cut level",
+  val outputFile = "$runDir${File.separator}graph_${getDateTimeString()}.png"
+  plotPerf(resYices, resZ3, resCVC5, title = "ChangedLaneAndNoRollBefore incremental test", xLabel = "Cut level",
     legendPosition = LegendPosition.BEST, outputFile = outputFile, rmMemPlot = !useMemProfiler)
 }
 
-class ChangedLaneAndNoRollBeforeIncrementalTestArgs(parser: ArgParser) {
+private class ChangedLaneAndNoRollBeforeIncrementalTestArgs(parser: ArgParser) {
   val disableMemoryProfiler by parser.flagging("-D", "--disable_memory_profiler", help = "Disable memory profiler")
   val timeout by parser.storing("-T", "--timeout", help = "Specifies the timeout for the solver in seconds") {
     this.toInt()
@@ -163,6 +164,6 @@ class ChangedLaneAndNoRollBeforeIncrementalTestArgs(parser: ArgParser) {
 
 fun main(args: Array<String>) = mainBody {
   ArgParser(args).parseInto(::ChangedLaneAndNoRollBeforeIncrementalTestArgs).run {
-    runChangedLaneAndNoRollBeforeIncrementalTest(!disableMemoryProfiler, 60 * 5)
+    runChangedLaneAndNoRollBeforeIncrementalTest(!disableMemoryProfiler, timeout)
   }
 }

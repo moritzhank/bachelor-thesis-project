@@ -16,8 +16,7 @@ import kotlin.time.Duration
 
 interface PerfExperimentSetup {
 
-  val x: Int
-  val overrideSmt2FileName: String?
+  val identifier: Int
 
   fun specialSolverArgs(solver: SmtSolver): Array<String> {
     return when(solver) {
@@ -29,7 +28,7 @@ interface PerfExperimentSetup {
 
 }
 
-abstract class PerfExperiment(val name: String) {
+abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
 
   private val expFolderName = "_experiment${File.separator}${name.replaceFirstChar { it.lowercase() }}"
   /** Returns the experiment path, guaranteed without '\' or '/' at the end. */
@@ -38,8 +37,9 @@ abstract class PerfExperiment(val name: String) {
   protected var useMemoryProfiler = true
   protected var memoryProfilerSampleRateMs = 100
   protected var timeOutInSeconds = 120
+  protected var fileName: (T) -> String? = { null }
 
-  abstract fun generateSmtLib(exp: PerfExperimentSetup, solver: SmtSolver, logic: String): String
+  abstract fun generateSmtLib(experiment: T, solver: SmtSolver, logic: String): String
 
   private fun generateDetailsComment(solver: SmtSolver, logic: String, title: String, color: String, label: String): String {
     val sysInfo = SystemInfo()
@@ -65,28 +65,30 @@ abstract class PerfExperiment(val name: String) {
     return result.toString()
   }
 
-  /** @return Path to the resulting CSV file */
+  /** @return Path of the resulting CSV file */
   fun runExperiment(
-    experiments: List<PerfExperimentSetup>,
+    experiments: List<T>,
     solver: SmtSolver,
     logic: String,
     repetitions: Int,
     color: String,
     label: String,
+    runID: String,
     resTime: (Array<Long>) -> String,
-    resMaxSolverMemUsageGB: (List<Long>) -> String,
-    removeSmt2File: Boolean = true
+    resMaxSolverMemUsageGB: (List<Long>) -> String
   ): String {
     // Run experiment
     val results = Array(experiments.size) { Array(repetitions) { -1L } }
     val memoryStats = Array(experiments.size) { Array(repetitions) { Pair(-1.0, -1L) } }
+    val runDirectoryPath = getRunDirectoryPath(runID)
+    File(runDirectoryPath).mkdirs()
     run experiments@{
       experiments.forEachIndexed { i, setup ->
         val smtLib = generateSmtLib(setup, solver, logic)
+        val filePath = "$runDirectoryPath${File.separator}${fileName(setup)}"
         (0 ..< repetitions).forEach { j ->
-          val result = runSmtSolver(smtLib, solver, removeSmt2File, getTimeOutArg(solver, timeOutInSeconds),
-            getStatsArg(solver), *setup.specialSolverArgs(solver), yicesTimeoutInSeconds = timeOutInSeconds,
-            fileName = setup.overrideSmt2FileName) { pid ->
+          val result = runSmtSolver(smtLib, solver, filePath, false, timeOutInSeconds,
+            getTimeOutArg(solver, timeOutInSeconds), getStatsArg(solver), *setup.specialSolverArgs(solver)) { pid ->
             if (useMemoryProfiler) {
               val memProfiler = MemoryProfiler.start(pid.toInt(), memoryProfilerSampleRateMs)
               if (memoryProfilerWorkingCond(memProfiler)) {
@@ -94,6 +96,9 @@ abstract class PerfExperiment(val name: String) {
               }
             }
           }
+          // Write log file
+          val logFile = File("$filePath.log")
+          logFile.writeText(result ?: "Timeout")
           // Timeout occurred
           if (result == null) {
             memoryStats[i][j] = Pair(-1.0, -1L)
@@ -113,7 +118,7 @@ abstract class PerfExperiment(val name: String) {
     val maxSolverMemUsageBCols = (1..repetitions).fold("") { acc, i -> "$acc\"maxSolverMemUsageB$i\", " }.dropLast(2)
     val csv = StringBuilder()
     csv.appendLine(generateDetailsComment(solver, logic, "\"$name\"-Benchmark", color, label))
-    csv.appendLine("\"x\", $timeCols, $maxSysMemUsagePCols, $maxSolverMemUsageBCols, \"resTime\", \"resMaxSolverMemUsageGB\"")
+    csv.appendLine("\"identifier\", $timeCols, $maxSysMemUsagePCols, $maxSolverMemUsageBCols, \"resTime\", \"resMaxSolverMemUsageGB\"")
     run timeRows@{
       experiments.forEachIndexed { i, setup ->
         if (results[i].any { it == -1L }) {
@@ -128,14 +133,15 @@ abstract class PerfExperiment(val name: String) {
         }.dropLast(2)
         val r1 = resTime(results[i])
         val r2 = resMaxSolverMemUsageGB(memoryStats[i].map { it.second })
-        csv.appendLine("${setup.x}, $resultTimeCols, $resultMaxSysMemUsagePCols, $resultMaxSolverMemUsageBCols, $r1, $r2")
+        csv.appendLine("${setup.identifier}, $resultTimeCols, $resultMaxSysMemUsagePCols, $resultMaxSolverMemUsageBCols, $r1, $r2")
       }
     }
-    File(expFolderPath).mkdirs()
-    val resultCsvFile = File("$expFolderPath${File.separator}${solver.solverName}_${getDateTimeString()}.csv")
+    val resultCsvFile = File("$runDirectoryPath${File.separator}${solver.solverName}_${getDateTimeString()}.csv")
     resultCsvFile.writeText(csv.toString())
     return resultCsvFile.absolutePath
   }
+
+  fun getRunDirectoryPath(runID: String) = "$expFolderPath${File.separator}$runID"
 
   private fun getStatsArg(solver: SmtSolver): String {
     return when(solver) {

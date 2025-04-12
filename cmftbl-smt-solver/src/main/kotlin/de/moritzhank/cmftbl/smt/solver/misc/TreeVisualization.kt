@@ -90,15 +90,7 @@ fun ITreeVisualizationNode.generateGraphvizCode(): String {
 }
 
 /** Generate an SVG of the input tree by calling quickchart.io with [graphviz]. */
-fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true, fileName: String? = null) {
-  val treeImgs = getAbsolutePathFromProjectDir("_treeSvgs")
-  File(treeImgs)
-      .apply {
-        if (deletePrevSvgs) {
-          deleteRecursively()
-        }
-      }
-      .mkdir()
+fun renderTree(graphviz: String, filePath: String) {
   val content = graphviz.replace("\"", "\\\"")
   val jsonRequestBody = "{\"graph\": \"$content\",\"layout\": \"dot\",\"format\": \"svg\"}"
   val url = URI("https://quickchart.io/graphviz").toURL()
@@ -111,7 +103,24 @@ fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true, fileName: Strin
     it.flush()
   }
   val imageData = con.inputStream.readBytes()
-  val name = fileName ?: UUID.randomUUID().toString()
+  File(filePath).apply { writeBytes(imageData) }
+}
+
+/**
+ * Generate an SVG of the input tree by calling quickchart.io with [graphviz].
+ * @return Path to generated file.
+ */
+fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true): String {
+  val treeImgs = getAbsolutePathFromProjectDir("_treeSvgs")
+  File(treeImgs)
+      .apply {
+        if (deletePrevSvgs) {
+          deleteRecursively()
+        }
+      }
+      .mkdir()
+  val name = UUID.randomUUID().toString()
   val imageFilePath = "$treeImgs${File.separator}${name}.svg"
-  File(imageFilePath).apply { writeBytes(imageData) }
+  renderTree(graphviz, imageFilePath)
+  return imageFilePath
 }
