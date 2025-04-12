@@ -52,4 +52,15 @@ internal class EvaluationContext(
   fun getSmtID(ccb: CCB<*>): String? =
     previouslyIntroducedVariables[ccb]?.emittedID ?: previouslyBoundCallContexts[ccb]
 
+  /** Create an exact copy. */
+  fun copy(): EvaluationContext {
+    return EvaluationContext(
+      evaluationIDGenerator.copy(),
+      constraintIDGenerator.copy(),
+      previouslyBoundCallContexts.toMap(),
+      previouslyIntroducedVariables.toMap(),
+      previouslyAssignedIDs.toMap()
+    )
+  }
+
 }

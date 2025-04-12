@@ -2,16 +2,13 @@
 
 package de.moritzhank.cmftbl.smt.solver.misc
 
+import de.moritzhank.cmftbl.smt.solver.translation.formula.emitsSomething
 import java.io.File
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.UUID
 import kotlin.collections.ArrayDeque
-import kotlin.collections.Iterator
-import kotlin.collections.List
-import kotlin.collections.forEach
-import kotlin.collections.isNotEmpty
 
 interface ITreeVisualizationNode {
 
@@ -22,6 +19,8 @@ interface ITreeVisualizationNode {
   fun getTVNEdgeStyle(): String? = null
 
   val children: List<ITreeVisualizationNode>
+
+  fun copy(): ITreeVisualizationNode
 
   /** Iterator that traverses the tree by breadth search.  */
   fun iterator() = object : Iterator<ITreeVisualizationNode> {
@@ -39,6 +38,26 @@ interface ITreeVisualizationNode {
       }
       return next
     }
+  }
+
+  /**
+   * Creates a new tree that only contains [remainingNodes] nodes (that emit something) in breath first order.
+   * This works only if [ITreeVisualizationNode.children] is implemented as a [MutableList].
+   */
+  fun copyAndSlice(remainingNodes: Int): ITreeVisualizationNode  {
+    val copy = copy()
+    val breathFirstIteration = copy.iterator().asSequence().toList()
+    val nodesThatCanBeRemoved = breathFirstIteration.filter { it.emitsSomething() }
+    if (nodesThatCanBeRemoved.size - remainingNodes > 0) {
+      val nodesToBeRemoved = nodesThatCanBeRemoved.subList(remainingNodes, nodesThatCanBeRemoved.size)
+      breathFirstIteration.forEach {
+        val parent = it
+        (parent.children as MutableList<*>).removeIf {
+          nodesToBeRemoved.contains(it)
+        }
+      }
+    }
+    return copy
   }
 
 }
@@ -71,7 +90,7 @@ fun ITreeVisualizationNode.generateGraphvizCode(): String {
 }
 
 /** Generate an SVG of the input tree by calling quickchart.io with [graphviz]. */
-fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true) {
+fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true, fileName: String? = null) {
   val treeImgs = getAbsolutePathFromProjectDir("_treeSvgs")
   File(treeImgs)
       .apply {
@@ -92,6 +111,7 @@ fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true) {
     it.flush()
   }
   val imageData = con.inputStream.readBytes()
-  val imageFilePath = "$treeImgs${File.separator}${UUID.randomUUID()}.svg"
+  val name = fileName ?: UUID.randomUUID().toString()
+  val imageFilePath = "$treeImgs${File.separator}${name}.svg"
   File(imageFilePath).apply { writeBytes(imageData) }
 }

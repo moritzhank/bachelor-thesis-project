@@ -47,10 +47,10 @@ internal interface IEvalNode: ITreeVisualizationNode {
 internal class OrgaEvalNode(
   override val children: MutableList<IEvalNode>,
   override val evalCtx: EvaluationContext,
-  val content: String
+  val content: String,
+  override val nodeID: Int? = evalCtx.genConstraintID()
 ): IEvalNode {
 
-  override val nodeID: Int? = evalCtx.genConstraintID()
   override val emissions: MutableList<IEmission> = mutableListOf()
   override var childSatNotRequired = false
 
@@ -61,6 +61,18 @@ internal class OrgaEvalNode(
             "<TD BGCOLOR=\"lightgray\">ORGA $content</TD>" +
             "</TR>" +
             "</TABLE>"
+  }
+
+  /** Create an exact copy. */
+  override fun copy(): ITreeVisualizationNode {
+    val copiedChildren = mutableListOf<IEvalNode>()
+    children.forEach {
+      copiedChildren.add(it.copy() as IEvalNode)
+    }
+    val childSatNotRequiredCopy = childSatNotRequired
+    return OrgaEvalNode(copiedChildren, evalCtx.copy(), content, nodeID).apply {
+      childSatNotRequired = childSatNotRequiredCopy
+    }
   }
 
 }
@@ -102,6 +114,23 @@ internal class EvalNode(
     return getTVNTableString(nodeID, "EVAL @ $evaluatedTickIndex", evaluable::class.simpleName!!, rows)
   }
 
+  /** Create an exact copy. */
+  override fun copy(): ITreeVisualizationNode {
+    val copiedChildren = mutableListOf<IEvalNode>()
+    children.forEach {
+      copiedChildren.add(it.copy() as IEvalNode)
+    }
+    return EvalNode(
+      copiedChildren,
+      evalCtx.copy(),
+      emissions.toMutableList(),
+      evaluable,
+      evaluatedTickIndex,
+      annotation,
+      nodeID
+    )
+  }
+
 }
 
 /** Represents the evaluation of a formula or term in an interval in order to find a witness. */
@@ -135,6 +164,26 @@ internal class WitnessEvalNode(
     return getTVNTableString(nodeID, "WTNS in ${interval.str()}", evaluable::class.simpleName!!, rows)
   }
 
+  /** Create an exact copy. */
+  override fun copy(): ITreeVisualizationNode {
+    val copiedChildren = mutableListOf<IEvalNode>()
+    children.forEach {
+      copiedChildren.add(it.copy() as IEvalNode)
+    }
+    val childSatNotRequiredCopy = childSatNotRequired
+    return WitnessEvalNode(
+      copiedChildren,
+      evalCtx.copy(),
+      emissions.toMutableList(),
+      evaluable,
+      interval.copy(),
+      annotation,
+      nodeID
+    ).apply {
+      childSatNotRequired = childSatNotRequiredCopy
+    }
+  }
+
 }
 
 /** Represents the introduction of a variable that is needed for the translation process but is not part of the AST. */
@@ -158,10 +207,9 @@ internal class VarIntroNode(
   val tickPrecondition: EvaluationTickPrecondition?,
   /** Changes the emission of [EvalInIntervalConstraintEmission] and [EvalAtTickConstraintEmission]. */
   val sameTimeAs: String?,
-  val sameTimeAsCCB: CCB<*>?
-): IEvalNode {
-
+  val sameTimeAsCCB: CCB<*>?,
   override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
+): IEvalNode {
 
   /**
    * The emissions of [VarIntroNode] are automatically generated (with IDs from [evalCtx]) and contain the
@@ -200,6 +248,33 @@ internal class VarIntroNode(
     return getTVNTableString(nodeID, "VAR_INTRO for $referenceCCB", tickPrecondStr + emissionsStr)
   }
 
+  /** Create an exact copy. */
+  override fun copy(): ITreeVisualizationNode {
+    val copiedChildren = mutableListOf<IEvalNode>()
+    children.forEach {
+      copiedChildren.add(it.copy() as IEvalNode)
+    }
+    val emissionsRef = emissions
+    val childSatNotRequiredCopy = childSatNotRequired
+    return VarIntroNode(
+      copiedChildren,
+      evalCtx.copy(),
+      emittedID,
+      referenceCCB,
+      assertedID,
+      evaluatedTickIndex,
+      evaluatedInterval?.copy(),
+      tickPrecondition?.copy(),
+      sameTimeAs,
+      sameTimeAsCCB,
+      nodeID
+    ).apply {
+      emissions.clear()
+      emissions.addAll(emissionsRef)
+      childSatNotRequired = childSatNotRequiredCopy
+    }
+  }
+
 }
 
 /** Is used as an intermediate step. */
@@ -228,6 +303,24 @@ internal class UniversalEvalNode(
     return getTVNTableString(nodeID, "UNIV in ${interval.str()}", evaluable::class.simpleName!!, tickPrecondStr)
   }
 
+  /** Create an exact copy. */
+  override fun copy(): ITreeVisualizationNode {
+    val copiedChildren = mutableListOf<IEvalNode>()
+    children.forEach {
+      copiedChildren.add(it.copy() as IEvalNode)
+    }
+    val childSatNotRequiredCopy = childSatNotRequired
+    return UniversalEvalNode(
+      evalCtx.copy(),
+      evaluable,
+      evaluatedTickIndex,
+      tickPrecondition?.copy(),
+      interval.copy()
+    ).apply {
+      childSatNotRequired = childSatNotRequiredCopy
+    }
+  }
+
 }
 
 private fun getTVNTableString(nodeID: Int?, modeStr: String, titleStr: String, rows: String) : String {
@@ -251,4 +344,10 @@ private fun getTVNTableString(nodeID: Int, titleStr: String, rows: String) : Str
           "</TR>" +
           rows +
           "</TABLE>"
+}
+
+/** Does node emit something? */
+fun ITreeVisualizationNode.emitsSomething(): Boolean {
+  require(this is IEvalNode)
+  return this.nodeID != null
 }

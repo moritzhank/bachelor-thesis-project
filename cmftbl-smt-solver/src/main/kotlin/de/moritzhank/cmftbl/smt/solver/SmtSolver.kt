@@ -33,12 +33,14 @@ fun runSmtSolver(
     removeSmt2File: Boolean = true,
     vararg solverArgs: String,
     yicesTimeoutInSeconds: Int = 120,
+    fileName: String? = null,
     memoryProfilerCallback: ((Long) -> Unit)? = null,
 ): String? {
   val solverBinPath = requireSolverBinPath(solver)
   val smtTmpDirPath = getAbsolutePathFromProjectDir("_smtTmp")
   File(smtTmpDirPath).mkdir()
-  val smt2FilePath = "$smtTmpDirPath${File.separator}${UUID.randomUUID()}.smt2"
+  val fileName = fileName ?: UUID.randomUUID().toString()
+  val smt2FilePath = "$smtTmpDirPath${File.separator}$fileName.smt2"
   val smt2File = File(smt2FilePath).apply { writeText(program) }
   val proc = ProcessBuilder(solverBinPath, smt2FilePath, *solverArgs).start()
   // MemoryProfiler should run async

@@ -14,6 +14,8 @@ import de.moritzhank.cmftbl.smt.solver.smtSolverVersion
 
 class SmtDistinctPerformanceSetup(override val x: Int) : PerfExperimentSetup {
 
+  override val overrideSmt2FileName: String? = null
+
   override fun toString(): String {
     return "SmtDistinctPerf with $x distinct individuals"
   }

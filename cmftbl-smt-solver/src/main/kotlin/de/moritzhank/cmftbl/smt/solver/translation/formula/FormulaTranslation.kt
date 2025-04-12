@@ -131,7 +131,10 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
         val implicantStr = "(${precond.operation.toSMTString()} $refStr ${tickDataSeconds(precond.tickWitnessTimeID)})"
         result.appendLine("(assert (= $holdVarStr (=> $implicantStr ${generateAndStructure(holdVars)})))")
       } else {
-        result.appendLine("(assert (= holdVarStr ${generateAndStructure(holdVars)}))")
+        // If needed so that slicing works (node can have a nodeID but emits nothing in this case)
+        if (holdVars.isNotEmpty()) {
+          result.appendLine("(assert (= $holdVarStr ${generateAndStructure(holdVars)}))")
+        }
       }
     }
   }

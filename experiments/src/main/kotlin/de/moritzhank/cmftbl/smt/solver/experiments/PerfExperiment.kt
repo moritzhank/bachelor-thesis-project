@@ -17,6 +17,7 @@ import kotlin.time.Duration
 interface PerfExperimentSetup {
 
   val x: Int
+  val overrideSmt2FileName: String?
 
   fun specialSolverArgs(solver: SmtSolver): Array<String> {
     return when(solver) {
@@ -74,7 +75,7 @@ abstract class PerfExperiment(val name: String) {
     label: String,
     resTime: (Array<Long>) -> String,
     resMaxSolverMemUsageGB: (List<Long>) -> String,
-    removeSmt2File: Boolean = true,
+    removeSmt2File: Boolean = true
   ): String {
     // Run experiment
     val results = Array(experiments.size) { Array(repetitions) { -1L } }
@@ -84,7 +85,8 @@ abstract class PerfExperiment(val name: String) {
         val smtLib = generateSmtLib(setup, solver, logic)
         (0 ..< repetitions).forEach { j ->
           val result = runSmtSolver(smtLib, solver, removeSmt2File, getTimeOutArg(solver, timeOutInSeconds),
-            getStatsArg(solver), *setup.specialSolverArgs(solver), yicesTimeoutInSeconds = timeOutInSeconds) { pid ->
+            getStatsArg(solver), *setup.specialSolverArgs(solver), yicesTimeoutInSeconds = timeOutInSeconds,
+            fileName = setup.overrideSmt2FileName) { pid ->
             if (useMemoryProfiler) {
               val memProfiler = MemoryProfiler.start(pid.toInt(), memoryProfilerSampleRateMs)
               if (memoryProfilerWorkingCond(memProfiler)) {
