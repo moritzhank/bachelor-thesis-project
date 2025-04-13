@@ -36,7 +36,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
   abstract val memoryProfilerWorkingCond: (MemoryProfiler) -> Boolean
   protected var useMemoryProfiler = true
   protected var memoryProfilerSampleRateMs = 100
-  protected var timeOutInSeconds = 120
+  protected var timeOutInSeconds : Int? = 120
   protected var fileName: (T) -> String? = { null }
 
   abstract fun generateSmtLib(experiment: T, solver: SmtSolver, logic: String): String
@@ -52,7 +52,8 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
     result.appendLine("# Details for $title")
     result.appendLine("# Date, time: \"${getDateTimeString('.', ':', ", ", false)}\"")
     result.appendLine("# Solver: \"${smtSolverVersion(solver)}\" with logic: \"$logic\"")
-    result.appendLine("# Timeout: ${timeOutInSeconds}s")
+    val timeOutStr = timeOutInSeconds?.let { "${it}s" } ?: "none"
+    result.appendLine("# Timeout: $timeOutStr")
     result.appendLine("# Memory profiler: $memProfilerState with sample rate: ${memoryProfilerSampleRateMs}ms")
     result.appendLine("# CPU: \"$cpu\"")
     result.appendLine("# RAM: \"$ramStr\"")
@@ -97,7 +98,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
             }
           }
           // Write log file
-          val logFile = File("$filePath.log")
+          val logFile = File("${filePath}_${solver.solverName}.log")
           logFile.writeText(result ?: "Timeout")
           // Timeout occurred
           if (result == null) {
@@ -151,7 +152,10 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
   }
 
   /** The timeout of Yices2 does not work! */
-  private fun getTimeOutArg(solver: SmtSolver, timeOutInSeconds: Int): String {
+  private fun getTimeOutArg(solver: SmtSolver, timeOutInSeconds: Int?): String {
+    if (timeOutInSeconds == null) {
+      return ""
+    }
     return when(solver) {
       SmtSolver.CVC5 -> "--tlimit=${timeOutInSeconds * 1000}"
       SmtSolver.YICES -> "--timeout=$timeOutInSeconds"

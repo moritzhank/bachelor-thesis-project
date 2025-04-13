@@ -21,7 +21,7 @@ private class SmtDistinctPerformanceSetup(override val identifier: Int) : PerfEx
 
 }
 
-private class SmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int = 120):
+private class SmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? = null):
   PerfExperiment<SmtDistinctPerformanceSetup>("SmtDistinctPerf") {
 
   init {
@@ -58,7 +58,7 @@ private class SmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout
 
 }
 
-fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int = 120) {
+fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? = null) {
   val resMaxSolverMemUsageGBLambda: (List<Long>) -> String = { list ->
     val avg = list.avgWithoutInvalids()
     if (avg == -1L) "-1" else "${MemoryProfiler.bytesToGB(avg)}"
@@ -123,7 +123,7 @@ private class SmtDistinctPerformanceArgs(parser: ArgParser) {
   val disableMemoryProfiler by parser.flagging("-D", "--disable_memory_profiler", help = "Disable memory profiler")
   val timeout by parser.storing("-T", "--timeout", help = "Specifies the timeout for the solver in seconds") {
     this.toInt()
-  }.default(120)
+  }.default(null)
 }
 
 fun main(args: Array<String>) = mainBody {

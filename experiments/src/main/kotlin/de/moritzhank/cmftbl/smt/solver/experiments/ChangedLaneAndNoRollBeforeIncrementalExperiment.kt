@@ -34,14 +34,13 @@ private class ChangedLaneAndNoRollBeforeIncrementalSetup(
 
 }
 
-private class ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int = 120):
+private class ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int? = null):
   PerfExperiment<ChangedLaneAndNoRollBeforeIncrementalSetup>("ChangedLaneAndNoRollBeforeIncremental") {
 
   init {
     memoryProfilerSampleRateMs = 10
     useMemoryProfiler = useMemProfiler
     timeOutInSeconds = timeout
-    val fSep = File.separator
     fileName = { expSetup -> "slicing_${expSetup.identifier}.smt2" }
   }
 
@@ -74,7 +73,7 @@ private val changedLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
   }.apply { ccb.debugInfo = "l" }
 }
 
-fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int = 120) {
+fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int? = null) {
   val resMaxSolverMemUsageGBLambda: (List<Long>) -> String = { list ->
     val avg = list.avgWithoutInvalids()
     if (avg == -1L) "-1" else "${MemoryProfiler.bytesToGB(avg)}"
@@ -159,7 +158,7 @@ private class ChangedLaneAndNoRollBeforeIncrementalTestArgs(parser: ArgParser) {
   val disableMemoryProfiler by parser.flagging("-D", "--disable_memory_profiler", help = "Disable memory profiler")
   val timeout by parser.storing("-T", "--timeout", help = "Specifies the timeout for the solver in seconds") {
     this.toInt()
-  }.default(120)
+  }.default(null)
 }
 
 fun main(args: Array<String>) = mainBody {

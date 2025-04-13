@@ -40,7 +40,7 @@ fun runSmtSolver(
     solver: SmtSolver = SmtSolver.CVC5,
     filePath: String?,
     removeSmt2File: Boolean,
-    yicesTimeoutInSeconds: Int,
+    yicesTimeoutInSeconds: Int?,
     vararg solverArgs: String,
     memoryProfilerCallback: ((Long) -> Unit)?,
 ): String? {
@@ -53,7 +53,7 @@ fun runSmtSolver(
     memoryProfilerCallback?.invoke(proc.pid())
   }
   // Handle timeout for Yices2
-  if (solver == SmtSolver.YICES) {
+  if (solver == SmtSolver.YICES && yicesTimeoutInSeconds != null) {
     proc.waitFor(yicesTimeoutInSeconds.toLong(), TimeUnit.SECONDS)
     if (proc.isAlive) {
       proc.destroyForcibly().waitFor()
@@ -78,7 +78,7 @@ fun runSmtSolver(
   }
   val result = "Exited with $exitCode.\n" + proc.inputReader().readText() + proc.errorReader().readText()
   // Has run into timeout of Z3
-  if (solver == SmtSolver.Z3 && result.startsWith("timeout", true)) {
+  if (solver == SmtSolver.Z3 && result.lines().getOrNull(1)?.startsWith("timeout", true) == true) {
     return null
   }
   if (removeSmt2File) {
