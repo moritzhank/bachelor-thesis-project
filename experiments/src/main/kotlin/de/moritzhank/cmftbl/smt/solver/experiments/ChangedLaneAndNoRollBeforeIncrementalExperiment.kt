@@ -42,7 +42,7 @@ private class ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean 
     useMemoryProfiler = useMemProfiler
     timeOutInSeconds = timeout
     val fSep = File.separator
-    fileName = { expSetup -> "run${fSep}slicing_${expSetup.identifier}.smt2" }
+    fileName = { expSetup -> "slicing_${expSetup.identifier}.smt2" }
   }
 
   override val memoryProfilerWorkingCond: (MemoryProfiler) -> Boolean = { memProfiler ->

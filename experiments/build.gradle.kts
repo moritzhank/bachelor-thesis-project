@@ -6,7 +6,7 @@ plugins {
 val experimentClass = "ChangedLaneAndNoRollBeforeIncrementalExperimentKt"
 
 application {
-    mainClass.set("de.haneke.moritz.cmftbl.smt.solver.experiments.$experimentClass")
+    mainClass.set("de.moritzhank.cmftbl.smt.solver.experiments.$experimentClass")
 }
 
 tasks.jar {
