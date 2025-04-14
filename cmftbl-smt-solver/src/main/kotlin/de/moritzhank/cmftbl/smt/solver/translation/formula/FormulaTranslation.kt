@@ -108,11 +108,13 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
         }
         is FormulaeFromChildrenEmission -> {
           // TODO: CHECK
-          val emitSmtID = holdVar(emission.emissionID!!)
-          val opStr = logicalConnectiveSmtOperator(emission.formula)
-          val firstPart = holdVar(emission.evalNode1.nodeID!!)
-          val secondPart = holdVar(emission.evalNode2.nodeID!!)
-          result.appendLine("(assert (= $emitSmtID ($opStr $firstPart $secondPart)))")
+          if (node.children.size == 2) {
+            val emitSmtID = holdVar(emission.emissionID!!)
+            val opStr = logicalConnectiveSmtOperator(emission.formula)
+            val firstPart = holdVar(emission.evalNode1.nodeID!!)
+            val secondPart = holdVar(emission.evalNode2.nodeID!!)
+            result.appendLine("(assert (= $emitSmtID ($opStr $firstPart $secondPart)))")
+          }
         }
       }
     }

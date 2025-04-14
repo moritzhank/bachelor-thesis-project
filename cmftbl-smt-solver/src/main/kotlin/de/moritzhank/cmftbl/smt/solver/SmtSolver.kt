@@ -31,19 +31,19 @@ fun saveSmtFile(program: String, solver: SmtSolver = SmtSolver.CVC5, path: Strin
 
 /**
  * Run a local SMT-Solver instance. This requires a correct setup of "smtSolverSettings.json".
- * @return Returns null if a timeout occurred. Otherwise, the first line contains the exit code, followed by the output
- * and possible errors.
+ * @return The first line contains the exit code. The second line contains information about a possible manual
+ * interruption related to the timeout, followed by the output and possible errors.
  */
 @OptIn(DelicateCoroutinesApi::class)
 fun runSmtSolver(
-    program: String,
-    solver: SmtSolver = SmtSolver.CVC5,
-    filePath: String?,
-    removeSmt2File: Boolean,
-    yicesTimeoutInSeconds: Int?,
-    vararg solverArgs: String,
-    memoryProfilerCallback: ((Long) -> Unit)?,
-): String? {
+  program: String,
+  solver: SmtSolver = SmtSolver.CVC5,
+  filePath: String?,
+  removeSmt2File: Boolean,
+  manualTimeoutInSeconds: Int?,
+  vararg solverArgs: String,
+  memoryProfilerCallback: ((Long) -> Unit)?,
+): String {
   val solverBinPath = requireSolverBinPath(solver)
   val smt2FilePath = saveSmtFile(program, solver, filePath)
   val smt2File = File(smt2FilePath)
@@ -52,9 +52,10 @@ fun runSmtSolver(
   GlobalScope.launch {
     memoryProfilerCallback?.invoke(proc.pid())
   }
+  var timeoutOccurred = false
   // Handle timeout for Yices2
-  if (solver == SmtSolver.YICES && yicesTimeoutInSeconds != null) {
-    proc.waitFor(yicesTimeoutInSeconds.toLong(), TimeUnit.SECONDS)
+  if (solver == SmtSolver.YICES && manualTimeoutInSeconds != null) {
+    timeoutOccurred = !proc.waitFor(manualTimeoutInSeconds.toLong(), TimeUnit.SECONDS)
     if (proc.isAlive) {
       proc.destroyForcibly().waitFor()
     }
@@ -62,25 +63,14 @@ fun runSmtSolver(
     proc.waitFor()
   }
   val exitCode = proc.exitValue()
-  // Has run into timeout/error of Yices2
-  if (solver == SmtSolver.YICES && exitCode != 0) {
+  // Has run into timeout
+  if (timeoutOccurred) {
     if (removeSmt2File) {
       smt2File.delete()
     }
-    return null
+    return "Exited with $exitCode.\nManual interruption of process due to timeout."
   }
-  // Has run into timeout/error of CVC5
-  if (solver == SmtSolver.CVC5 && exitCode != 0) {
-    if (removeSmt2File) {
-      smt2File.delete()
-    }
-    return null
-  }
-  val result = "Exited with $exitCode.\n" + proc.inputReader().readText() + proc.errorReader().readText()
-  // Has run into timeout of Z3
-  if (solver == SmtSolver.Z3 && result.lines().getOrNull(1)?.startsWith("timeout", true) == true) {
-    return null
-  }
+  val result = "Exited with $exitCode.\n\n" + proc.inputReader().readText() + proc.errorReader().readText()
   if (removeSmt2File) {
     smt2File.delete()
   }

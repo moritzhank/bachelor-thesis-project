@@ -36,7 +36,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
   abstract val memoryProfilerWorkingCond: (MemoryProfiler) -> Boolean
   protected var useMemoryProfiler = true
   protected var memoryProfilerSampleRateMs = 100
-  protected var timeOutInSeconds : Int? = 120
+  protected var timeOutInSeconds : Int? = null
   protected var fileName: (T) -> String? = { null }
 
   abstract fun generateSmtLib(experiment: T, solver: SmtSolver, logic: String): String
@@ -88,8 +88,9 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
         val smtLib = generateSmtLib(setup, solver, logic)
         val filePath = "$runDirectoryPath${File.separator}${fileName(setup)}"
         (0 ..< repetitions).forEach { j ->
-          val result = runSmtSolver(smtLib, solver, filePath, false, timeOutInSeconds,
-            getTimeOutArg(solver, timeOutInSeconds), getStatsArg(solver), *setup.specialSolverArgs(solver)) { pid ->
+          val args = mutableListOf(getTimeOutArg(solver, timeOutInSeconds), getStatsArg(solver),
+            *setup.specialSolverArgs(solver)).apply { removeIf { it.isEmpty() } }.toTypedArray()
+          val result = runSmtSolver(smtLib, solver, filePath, false, timeOutInSeconds, *args) { pid ->
             if (useMemoryProfiler) {
               val memProfiler = MemoryProfiler.start(pid.toInt(), memoryProfilerSampleRateMs)
               if (memoryProfilerWorkingCond(memProfiler)) {
@@ -99,16 +100,22 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
           }
           // Write log file
           val logFile = File("${filePath}_${solver.solverName}.log")
-          logFile.writeText(result ?: "Timeout")
+          logFile.writeText(result)
           // Timeout occurred
-          if (result == null) {
+          if (didTimeoutOccurInOutput(solver, result)) {
             memoryStats[i][j] = Pair(-1.0, -1L)
             println("${solver.solverName} timed out for $setup.")
             return@experiments
           }
-          val resultingTime = extractDurationFromOutput(solver, result).inWholeMilliseconds
-          results[i][j] = resultingTime
-          println("${solver.solverName} took ${resultingTime}ms for $setup.")
+          // Error occurred
+          if (extractExitCodeFromOutput(result) != 0) {
+            memoryStats[i][j] = Pair(-1.0, -1L)
+            println("${solver.solverName} had an error for $setup.")
+          } else {
+            val resultingTime = extractDurationFromOutput(solver, result).inWholeMilliseconds
+            results[i][j] = resultingTime
+            println("${solver.solverName} took ${resultingTime}ms for $setup.")
+          }
         }
       }
     }
@@ -151,7 +158,6 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
     }
   }
 
-  /** The timeout of Yices2 does not work! */
   private fun getTimeOutArg(solver: SmtSolver, timeOutInSeconds: Int?): String {
     if (timeOutInSeconds == null) {
       return ""
@@ -178,5 +184,23 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
         Duration.parse(output.lines().first { it.startsWith(prefix) }.drop(prefix.length) + "s")
       }
     }
+  }
+
+  private fun didTimeoutOccurInOutput(solver: SmtSolver, output: String): Boolean {
+    return when(solver) {
+      SmtSolver.CVC5 -> {
+        output.lines().getOrNull(2)?.endsWith("timeout.", true) == true
+      }
+      SmtSolver.Z3 -> {
+        output.lines().getOrNull(2)?.startsWith("timeout", true) == true
+      }
+      SmtSolver.YICES -> {
+        output.lines().getOrNull(1)?.isNotEmpty() == true
+      }
+    }
+  }
+
+  private fun extractExitCodeFromOutput(output: String): Int? {
+    return output.lines().getOrNull(0)?.removePrefix("Exited with ")?.removeSuffix(".")?.toIntOrNull()
   }
 }
