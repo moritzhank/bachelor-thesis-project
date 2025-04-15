@@ -2,10 +2,13 @@
 
 package de.moritzhank.cmftbl.smt.solver.misc
 
+import de.moritzhank.cmftbl.smt.solver.translation.formula.emitsSomething
 import java.io.File
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
 import java.net.URI
-import java.net.URLEncoder
 import java.util.UUID
+import kotlin.collections.ArrayDeque
 
 interface ITreeVisualizationNode {
 
@@ -13,7 +16,11 @@ interface ITreeVisualizationNode {
 
   fun getTVNColors(): Pair<String, String>? = null
 
+  fun getTVNEdgeStyle(): String? = null
+
   val children: List<ITreeVisualizationNode>
+
+  fun copy(): ITreeVisualizationNode
 
   /** Iterator that traverses the tree by breadth search.  */
   fun iterator() = object : Iterator<ITreeVisualizationNode> {
@@ -33,26 +40,49 @@ interface ITreeVisualizationNode {
     }
   }
 
+  /**
+   * Creates a new tree that only contains [remainingNodes] nodes (that emit something) in breath first order.
+   * This works only if [ITreeVisualizationNode.children] is implemented as a [MutableList].
+   */
+  fun copyAndSlice(remainingNodes: Int): ITreeVisualizationNode  {
+    val copy = copy()
+    val breathFirstIteration = copy.iterator().asSequence().toList()
+    val nodesThatCanBeRemoved = breathFirstIteration.filter { it.emitsSomething() }
+    if (nodesThatCanBeRemoved.size - remainingNodes > 0) {
+      val nodesToBeRemoved = nodesThatCanBeRemoved.subList(remainingNodes, nodesThatCanBeRemoved.size)
+      breathFirstIteration.forEach {
+        val parent = it
+        (parent.children as MutableList<*>).removeIf {
+          nodesToBeRemoved.contains(it)
+        }
+      }
+    }
+    return copy
+  }
+
 }
 
 fun ITreeVisualizationNode.generateGraphvizCode(): String {
   val result = StringBuilder()
   result.append("digraph G {")
-  result.append("node [shape=box];")
+  result.append("node [shape=plaintext];")
   val queue =
       ArrayDeque<Pair<Int, ITreeVisualizationNode>>().apply {
         add(Pair(0, this@generateGraphvizCode))
       }
   var nextId = 1
   while (queue.isNotEmpty()) {
-    val node = queue.removeFirst()
-    val colorsOfNode = node.second.getTVNColors()
+    val entry = queue.removeFirst()
+    val node = entry.second
+    val colorsOfNode = node.getTVNColors()
     val colorAppendix = if (colorsOfNode == null) "" else ", color=${colorsOfNode.first}, fontcolor=${colorsOfNode.second}"
-    result.append("n${node.first} [label=<${node.second.getTVNContent()}>$colorAppendix];")
-    node.second.children.forEach {
+    result.append("n${entry.first} [label=<${node.getTVNContent()}>$colorAppendix];")
+    node.children.forEach {
       val childID = nextId++
       queue.add(Pair(childID, it))
-      result.append("n${node.first} -> n$childID;")
+      val edgeStyle = node.getTVNEdgeStyle()
+      val edgeStyleStr = if (edgeStyle == null) "" else " [style=\"$edgeStyle\"]"
+      result.append("n${entry.first} -> n$childID$edgeStyleStr;")
     }
   }
   result.append("}")
@@ -60,7 +90,27 @@ fun ITreeVisualizationNode.generateGraphvizCode(): String {
 }
 
 /** Generate an SVG of the input tree by calling quickchart.io with [graphviz]. */
-fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true) {
+fun renderTree(graphviz: String, filePath: String) {
+  val content = graphviz.replace("\"", "\\\"")
+  val jsonRequestBody = "{\"graph\": \"$content\",\"layout\": \"dot\",\"format\": \"svg\"}"
+  val url = URI("https://quickchart.io/graphviz").toURL()
+  val con = url.openConnection() as HttpURLConnection
+  con.requestMethod = "POST"
+  con.setRequestProperty("Content-Type", "application/json")
+  con.doOutput = true
+  OutputStreamWriter(con.outputStream).use {
+    it.write(jsonRequestBody)
+    it.flush()
+  }
+  val imageData = con.inputStream.readBytes()
+  File(filePath).apply { writeBytes(imageData) }
+}
+
+/**
+ * Generate an SVG of the input tree by calling quickchart.io with [graphviz].
+ * @return Path to generated file.
+ */
+fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true): String {
   val treeImgs = getAbsolutePathFromProjectDir("_treeSvgs")
   File(treeImgs)
       .apply {
@@ -69,9 +119,8 @@ fun renderTree(graphviz: String, deletePrevSvgs: Boolean = true) {
         }
       }
       .mkdir()
-  val encodedGraphviz = URLEncoder.encode(graphviz, "utf-8")
-  val url = URI("https://quickchart.io/graphviz?graph=$encodedGraphviz").toURL()
-  val imageData = url.readBytes()
-  val imageFilePath = "$treeImgs${File.separator}${UUID.randomUUID()}.svg"
-  File(imageFilePath).apply { writeBytes(imageData) }
+  val name = UUID.randomUUID().toString()
+  val imageFilePath = "$treeImgs${File.separator}${name}.svg"
+  renderTree(graphviz, imageFilePath)
+  return imageFilePath
 }

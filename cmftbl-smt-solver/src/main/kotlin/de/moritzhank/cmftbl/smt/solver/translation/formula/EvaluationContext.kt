@@ -4,11 +4,18 @@ import de.moritzhank.cmftbl.smt.solver.dsl.CCB
 
 /** Contains information that are needed during the translation process of [IEvalNode]s. */
 internal class EvaluationContext(
+  /** This ID generator is used for introduced variables closely related to the formula. */
   val evaluationIDGenerator: EvaluationIDGenerator,
+  /** This ID generator is used for IDs of emissions and nodes. */
+  val constraintIDGenerator: EvaluationIDGenerator,
   val previouslyBoundCallContexts: Map<CCB<*>, String>,
   val previouslyIntroducedVariables: Map<CCB<*>, VarIntroNode>,
   val previouslyAssignedIDs: Map<CCB<*>, Int>
 ) {
+
+  fun genEvalID() = evaluationIDGenerator.generateID()
+
+  fun genConstraintID() = constraintIDGenerator.generateID()
 
   fun copy(
     newBoundCallContext: Pair<CCB<*>, String>? = null,
@@ -32,6 +39,7 @@ internal class EvaluationContext(
     }
     return EvaluationContext(
       evaluationIDGenerator,
+      constraintIDGenerator,
       copiedPreviouslyBoundCallContexts,
       copiedPreviouslyIntroducedVariables,
       copiedPreviouslyAssignedIDs
@@ -43,5 +51,16 @@ internal class EvaluationContext(
    */
   fun getSmtID(ccb: CCB<*>): String? =
     previouslyIntroducedVariables[ccb]?.emittedID ?: previouslyBoundCallContexts[ccb]
+
+  /** Create an exact copy. */
+  fun copy(): EvaluationContext {
+    return EvaluationContext(
+      evaluationIDGenerator.copy(),
+      constraintIDGenerator.copy(),
+      previouslyBoundCallContexts.toMap(),
+      previouslyIntroducedVariables.toMap(),
+      previouslyAssignedIDs.toMap()
+    )
+  }
 
 }

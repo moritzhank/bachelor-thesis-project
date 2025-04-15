@@ -7,12 +7,7 @@ fun toReducedSyntax(f: Formula, propagateNeg: Boolean = false): Formula {
     // Recursion anchor
     is FF,
     is TT -> if (propagateNeg) negAtomicAndCopy(f) else copyFormula(f)
-    is Leq<*>,
-    is Geq<*>,
-    is Lt<*>,
-    is Gt<*>,
-    is Eq<*>,
-    is Ne<*> -> if (propagateNeg) negRelationAndCopy(f) else copyFormula(f)
+    is EvaluableRelation<*> -> if (propagateNeg) negRelationAndCopy(f) else copyFormula(f)
     // Reduced syntax
     is Neg -> toReducedSyntax(f.inner, !propagateNeg)
     is And -> {

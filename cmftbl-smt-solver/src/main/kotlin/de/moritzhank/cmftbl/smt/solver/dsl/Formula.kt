@@ -4,23 +4,36 @@ import tools.aqua.stars.core.types.EntityType
 
 sealed interface Formula : Evaluable
 
+sealed interface LogicalConnectiveFormula : Formula
+
+sealed interface NextPreviousFormula : Formula {
+  val interval: Pair<Int, Int>?
+  val inner: Formula
+}
+
+sealed interface UntilSinceFormula : Formula {
+  val interval: Pair<Int, Int>?
+  val lhs: Formula
+  val rhs: Formula
+}
+
 data object TT : Formula
 
 data object FF : Formula
 
-data class Neg(val inner: Formula) : Formula
+data class Neg(val inner: Formula) : LogicalConnectiveFormula
 
-data class And(val lhs: Formula, val rhs: Formula) : Formula
+data class And(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
-data class Or(val lhs: Formula, val rhs: Formula) : Formula
+data class Or(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
-data class Implication(val lhs: Formula, val rhs: Formula) : Formula
+data class Implication(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
-data class Iff(val lhs: Formula, val rhs: Formula) : Formula
+data class Iff(val lhs: Formula, val rhs: Formula) : LogicalConnectiveFormula
 
-data class Prev(val interval: Pair<Int, Int>? = null, val inner: Formula) : Formula
+data class Prev(override val interval: Pair<Int, Int>? = null, override val inner: Formula) : NextPreviousFormula
 
-data class Next(val interval: Pair<Int, Int>? = null, val inner: Formula) : Formula
+data class Next(override val interval: Pair<Int, Int>? = null, override val inner: Formula) : NextPreviousFormula
 
 data class Once(val interval: Pair<Int, Int>? = null, val inner: Formula) : Formula
 
@@ -30,17 +43,21 @@ data class Eventually(val interval: Pair<Int, Int>? = null, val inner: Formula) 
 
 data class Always(val interval: Pair<Int, Int>? = null, val inner: Formula) : Formula
 
-data class Since(val interval: Pair<Int, Int>? = null, val lhs: Formula, val rhs: Formula) :
-    Formula
+data class Since(
+  override val interval: Pair<Int, Int>? = null,
+  override val lhs: Formula,
+  override val rhs: Formula
+) : UntilSinceFormula
 
-data class Until(val interval: Pair<Int, Int>? = null, val lhs: Formula, val rhs: Formula) :
-    Formula
+data class Until(
+  override val interval: Pair<Int, Int>? = null,
+  override val lhs: Formula,
+  override val rhs: Formula
+) : UntilSinceFormula
 
-data class Forall<E : EntityType<*, *, *, *, *>>(val ccb: CallContextBase<E>, val inner: Formula) :
-    Formula
+data class Forall<E : EntityType<*, *, *, *, *>>(val ccb: CallContextBase<E>, val inner: Formula) : Formula
 
-data class Exists<E : EntityType<*, *, *, *, *>>(val ccb: CallContextBase<E>, val inner: Formula) :
-    Formula
+data class Exists<E : EntityType<*, *, *, *, *>>(val ccb: CallContextBase<E>, val inner: Formula) : Formula
 
 data class Binding<Type: Any>(
     val ccb: CallContextBase<Type>,

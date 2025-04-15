@@ -8,4 +8,11 @@ internal class EvaluationIDGenerator {
   /** Generate an unique ID. */
   fun generateID(): Int = nextID++
 
+  /** Create an exact copy. */
+  fun copy(): EvaluationIDGenerator {
+    val copy = EvaluationIDGenerator()
+    copy.nextID = nextID
+    return copy
+  }
+
 }

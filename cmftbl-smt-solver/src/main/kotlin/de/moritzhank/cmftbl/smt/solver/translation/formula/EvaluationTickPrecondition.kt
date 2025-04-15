@@ -12,4 +12,9 @@ internal class EvaluationTickPrecondition(val tickWitnessTimeID: String, val ope
     return "${operation.toHTMLString()} $tickWitnessTimeID"
   }
 
+  /** Create an exact copy. */
+  fun copy(): EvaluationTickPrecondition {
+    return EvaluationTickPrecondition(tickWitnessTimeID, operation)
+  }
+
 }

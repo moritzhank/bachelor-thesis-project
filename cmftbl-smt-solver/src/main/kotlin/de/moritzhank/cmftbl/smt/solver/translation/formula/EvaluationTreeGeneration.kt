@@ -2,23 +2,26 @@
 
 package de.moritzhank.cmftbl.smt.solver.translation.formula
 
-import tools.aqua.stars.core.types.EntityType
 import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForBinding
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForEvaluableRelation
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForLogicConnective
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForNextPrevious
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForUntilSince
+import tools.aqua.stars.core.types.EntityType
 import kotlin.reflect.KClass
 
-
-// TODO: Remove
-inline fun <reified T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).genEval(
+// region Visualization
+inline fun <reified T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).generateVisualization(
   holdsFor: T,
   name: String,
   ticks: Array<Double>
 ) : ITreeVisualizationNode {
-  return this.genEval(holdsFor, T::class, name, ticks)
+  return this.generateVisualization(holdsFor, T::class, name, ticks)
 }
 
-// TODO: Remove
-fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).genEval(
+fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).generateVisualization(
   holdsFor: T,
   kClass: KClass<T>,
   name: String,
@@ -27,7 +30,32 @@ fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).genE
   return this.generateEvaluation(holdsFor, kClass, name, ticks)
 }
 
-/** Generates an [IEvalNode] for a formula. */
+inline fun <reified T: EntityType<*, *, *, *, *>, reified U: EntityType<*, *, *, *, *>>
+        ((CallContextBase<T>, CallContextBase<U>) -> FormulaBuilder).generateVisualization(
+  holdsFor1: T,
+  holdsFor2: U,
+  name1: String,
+  name2: String,
+  ticks: Array<Double>
+) : ITreeVisualizationNode {
+  return this.generateVisualization(holdsFor1, holdsFor2, T::class, U::class, name1, name2, ticks)
+}
+
+fun <T: EntityType<*, *, *, *, *>, U: EntityType<*, *, *, *, *>>
+        ((CallContextBase<T>, CallContextBase<U>) -> FormulaBuilder).generateVisualization(
+  holdsFor1: T,
+  holdsFor2: U,
+  kClass1: KClass<T>,
+  kClass2: KClass<U>,
+  name1: String,
+  name2: String,
+  ticks: Array<Double>
+) : ITreeVisualizationNode {
+  return this.generateEvaluation(holdsFor1, holdsFor2, kClass1, kClass2, name1, name2, ticks)
+}
+// endregion
+
+/** Generates an [IEvalNode] for a unary formula. */
 internal inline fun <reified T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).generateEvaluation(
   holdsFor: T,
   name: String,
@@ -36,179 +64,100 @@ internal inline fun <reified T: EntityType<*, *, *, *, *>> ((CallContextBase<T>)
   return this.generateEvaluation(holdsFor, T::class, name, ticks)
 }
 
-/** Generates an [IEvalNode] for a formula. */
+/** Generates an [IEvalNode] for a unary formula. */
 internal fun <T: EntityType<*, *, *, *, *>> ((CallContextBase<T>) -> FormulaBuilder).generateEvaluation(
   holdsFor: T,
   kClass: KClass<T>,
   name: String,
   ticks: Array<Double>
 ) : IEvalNode {
-  val evalCtx = EvaluationContext(EvaluationIDGenerator(), mapOf(), mapOf(), mapOf())
+  val evalCtx = EvaluationContext(EvaluationIDGenerator(), EvaluationIDGenerator(), mapOf(), mapOf(), mapOf())
   val ccb = CCB<T>(kClass).apply { debugInfo = name }
-  val ccbSMTName = "vinst_${evalCtx.evaluationIDGenerator.generateID()}"
+  val ccbSMTName = "inst${evalCtx.evaluationIDGenerator.generateID()}"
   val formula = this(ccb).getPhi().first()
 
   // Generate VarIntroNode
-  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null)
+  val varIntroNode = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName, ccb, holdsFor.id, 0, null, null, null, null)
   val newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb to varIntroNode, newAssignedID = ccb to holdsFor.id)
-  varIntroNode.children.add(formula.generateEvaluation(newEvalCtx, EvaluationType.EVALUATE, 0, null, null))
-
+  varIntroNode.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null))
   eliminateUniversalQuantification(varIntroNode, ticks)
   return varIntroNode
 }
 
+/** Generates an [IEvalNode] for a binary formula. */
+internal inline fun <reified T: EntityType<*, *, *, *, *>, reified U: EntityType<*, *, *, *, *>>
+        ((CallContextBase<T>, CallContextBase<U>) -> FormulaBuilder).generateEvaluation(
+  holdsFor1: T,
+  holdsFor2: U,
+  name1: String,
+  name2: String,
+  ticks: Array<Double>
+) : IEvalNode {
+  return this.generateEvaluation(holdsFor1, holdsFor2, T::class, U::class, name1, name2, ticks)
+}
+
+/** Generates an [IEvalNode] for a binary formula. */
+internal fun <T: EntityType<*, *, *, *, *>, U: EntityType<*, *, *, *, *>>
+        ((CallContextBase<T>, CallContextBase<U>) -> FormulaBuilder).generateEvaluation(
+  holdsFor1: T,
+  holdsFor2: U,
+  kClass1: KClass<T>,
+  kClass2: KClass<U>,
+  name1: String,
+  name2: String,
+  ticks: Array<Double>
+) : IEvalNode {
+  val evalCtx = EvaluationContext(EvaluationIDGenerator(), EvaluationIDGenerator(), mapOf(), mapOf(), mapOf())
+  val ccb1 = CCB<T>(kClass1).apply { debugInfo = name1 }
+  val ccb2 = CCB<U>(kClass2).apply { debugInfo = name2 }
+  val ccbSMTName1 = "inst${evalCtx.evaluationIDGenerator.generateID()}"
+  val ccbSMTName2 = "inst${evalCtx.evaluationIDGenerator.generateID()}"
+  val formula = this(ccb1, ccb2).getPhi().first()
+
+  // Generate VarIntroNodes
+  val varIntroNode1 = VarIntroNode(mutableListOf(), evalCtx, ccbSMTName1, ccb1, holdsFor1.id, 0, null, null, null, null)
+  var newEvalCtx = evalCtx.copy(newIntroducedVariable = ccb1 to varIntroNode1, newAssignedID = ccb1 to holdsFor1.id)
+  val varIntroNode2 = VarIntroNode(mutableListOf(), newEvalCtx, ccbSMTName2, ccb2, holdsFor2.id, 0, null, null,
+    ccbSMTName1, ccb1)
+  newEvalCtx = newEvalCtx.copy(newIntroducedVariable = ccb2 to varIntroNode2, newAssignedID = ccb2 to holdsFor2.id)
+  varIntroNode1.children.add(varIntroNode2)
+  varIntroNode2.children.add(generateEvaluation(formula, newEvalCtx, EvaluationType.EVALUATE, 0, null, null))
+  eliminateUniversalQuantification(varIntroNode1, ticks)
+  return varIntroNode1
+}
+
+
+
 /** Generates an [IEvalNode] from a [Formula]. */
-internal fun Formula.generateEvaluation(
+internal fun generateEvaluation(
+  formula: Formula,
   evalCtx: EvaluationContext,
   evalType: EvaluationType,
   evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
-  evalTickPrecond: EvaluationTickPrecondition?
+  evalInterval: Pair<Double, Double>?,
+  evalTickPrecondition: EvaluationTickPrecondition?
 ): IEvalNode {
-  return when (this) {
+  if (evalType == EvaluationType.UNIV_INST) {
+    return UniversalEvalNode(evalCtx, formula, evalTickIndex, evalTickPrecondition, evalInterval!!)
+  }
+  require(evalTickPrecondition == null)
+  return when (formula) {
     is EvaluableRelation<*> -> {
-      generateEvaluationForEvaluableRelation(evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecond)
-    }
-    is Until -> {
-      generateEvaluationForUntil(this, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+      generateEvaluationForEvaluableRelation(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
     is Binding<*> -> {
-      generateEvaluationForBinding(this, evalCtx, evalType, evalTickIndex, evalInterval, evalTickPrecond)
+      generateEvaluationForBinding(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
-    else -> error("The generation is not yet available for the formula type \"${this::class.simpleName}\".")
-  }
-}
-
-/** Generate an [IEvalNode] from a [Until]. */
-private fun generateEvaluationForUntil(
-  until: Until,
-  evalCtx: EvaluationContext,
-  evalType: EvaluationType,
-  evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
-  evalTickPrecond: EvaluationTickPrecondition?
-): IEvalNode {
-  return when (evalType) {
-    EvaluationType.EVALUATE -> {
-      require(evalTickPrecond == null) { "The generation of until with present tick precondition is not available yet." }
-
-      // Prepare result node
-      val resultNode = EvalNode(mutableListOf(), evalCtx, mutableListOf(), until, evalTickIndex, evalTickPrecond)
-      val usedUnboundVarsRhs = getUsedUnboundVariables(until.rhs, evalCtx)
-      val twtns = if (usedUnboundVarsRhs.isEmpty()) null else "twtns_${evalCtx.evaluationIDGenerator.generateID()}"
-      if(twtns != null) {
-        resultNode.emissions.add(DecConstEmission(twtns))
-      }
-
-      // Evaluate lhs
-      val tickPreconditionLhs = if(twtns == null) null else EvaluationTickPrecondition(twtns, Relation.Lt)
-      val lhs = until.lhs.generateEvaluation(evalCtx, EvaluationType.UNIV_INST, evalTickIndex, until.interval,
-        tickPreconditionLhs)
-      resultNode.children.add(lhs)
-
-      // Generate VarIntroNodes for rhs
-      val varIntroNodes = mutableListOf<VarIntroNode>()
-      var lastEvalCtx = evalCtx
-      usedUnboundVarsRhs.forEach {
-        val newVarName = "vinst_${lastEvalCtx.evaluationIDGenerator.generateID()}"
-        val varID = lastEvalCtx.previouslyAssignedIDs[it]!!
-        val newVarIntroNode = VarIntroNode(mutableListOf(), lastEvalCtx, newVarName, it, varID, evalTickIndex,
-          until.interval)
-        varIntroNodes.add(newVarIntroNode)
-        lastEvalCtx = lastEvalCtx.copy(newIntroducedVariable = it to newVarIntroNode)
-      }
-      varIntroNodes.forEachIndexed { i, node ->
-        if (i + 1 < varIntroNodes.size) {
-          node.children.add(varIntroNodes[i + 1])
-        }
-      }
-      var lastNode: IEvalNode = resultNode
-      if (varIntroNodes.isNotEmpty()) {
-        resultNode.children.add(varIntroNodes.first())
-        lastNode = varIntroNodes.last()
-      }
-
-      // Evaluate rhs
-      val rhs = until.rhs.generateEvaluation(lastEvalCtx, EvaluationType.WITNESS, evalTickIndex, until.interval, null)
-      lastNode.children.add(rhs)
-      if (twtns != null) {
-        // Add [TickWitnessTimeEmission] to right child node of until
-        resultNode.children[1].emissions.add(TickWitnessTimeEmission(varIntroNodes.first().emittedID, twtns))
-      }
-
-      resultNode
+    is LogicalConnectiveFormula  -> {
+      generateEvaluationForLogicConnective(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
-    else -> error("Nested evaluations with Until are not supported yet.")
-  }
-}
-
-/** Generate an [IEvalNode] from a [Binding]. */
-private fun generateEvaluationForBinding(
-  binding: Binding<*>,
-  evalCtx: EvaluationContext,
-  evalType: EvaluationType,
-  evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
-  evalTickPrecond: EvaluationTickPrecondition?
-): IEvalNode {
-  return when (evalType) {
-    EvaluationType.EVALUATE -> {
-      val boundVarID = "bnd_${evalCtx.evaluationIDGenerator.generateID()}"
-      val evalTerm = binding.bindTerm.generateEvaluation(evalCtx, evalType, evalTickIndex, null) as EvalNode
-      val newEvalCtx = evalCtx.copy(newBoundCallContext = binding.ccb to boundVarID)
-      val evalNode = binding.inner.generateEvaluation(newEvalCtx, evalType, evalTickIndex, null, evalTickPrecond)
-      val emissions = mutableListOf<IEmission>()
-      emissions.add(DecConstEmission(boundVarID))
-      emissions.add(BindingTermFromChildEmission(boundVarID, evalTerm))
-      EvalNode(mutableListOf(evalTerm, evalNode), evalCtx, emissions, binding, evalTickIndex, evalTickPrecond)
+    is NextPreviousFormula -> {
+      generateEvaluationForNextPrevious(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
-    else -> error("Evaluating a binding in anything other than EVALUATE mode is not yet supported.")
-  }
-}
-
-/** Generate an [IEvalNode] from a [EvaluableRelation]. */
-private fun EvaluableRelation<*>.generateEvaluationForEvaluableRelation(
-  evalContext: EvaluationContext,
-  evalType: EvaluationType,
-  evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
-  evalTickPrecond: EvaluationTickPrecondition?
-): IEvalNode {
-  return when (evalType) {
-    EvaluationType.EVALUATE -> {
-      val lhs = this.lhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as EvalNode
-      val rhs = this.rhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as EvalNode
-      val emissions = mutableListOf<IEmission>(TermFromChildrenConstraintEmission(type, lhs, rhs))
-      EvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalTickIndex, evalTickPrecond)
+    is UntilSinceFormula -> {
+      generateEvaluationForUntilSince(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
-    EvaluationType.WITNESS -> {
-      val lhs = this.lhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as WitnessEvalNode
-      val rhs = this.rhs.generateEvaluation(evalContext, evalType, evalTickIndex, evalInterval) as WitnessEvalNode
-      val emissions = mutableListOf<IEmission>(TermFromChildrenConstraintEmission(type, lhs, rhs))
-      WitnessEvalNode(mutableListOf(lhs, rhs), evalContext, emissions, this, evalInterval, evalTickPrecond)
-    }
-    EvaluationType.UNIV_INST -> {
-      UniversalEvalNode(evalContext, this, evalTickIndex, evalTickPrecond, evalInterval?.second)
-    }
-  }
-}
-
-/** Generate an [IEvalNode] from a [Term]. */
-private fun <T> Term<T>.generateEvaluation(
-  evalContext: EvaluationContext,
-  evalType: EvaluationType,
-  evalTickIndex: Int,
-  evalInterval: Pair<Int, Int>?,
-): IEvalNode {
-  val termStr = this.str((this as? Variable<*>)?.let { evalContext.getSmtID(it.callContext.base()) })
-  return when(evalType) {
-    EvaluationType.EVALUATE -> {
-      EvalNode(mutableListOf(), evalContext, mutableListOf(), this, evalTickIndex, null, termStr)
-    }
-    EvaluationType.WITNESS -> {
-      WitnessEvalNode(mutableListOf(), evalContext, mutableListOf(), this, evalInterval, null, termStr)
-    }
-    EvaluationType.UNIV_INST -> error("This path should not be reached.")
+    else -> error("The generation is not yet available for the formula type \"${formula::class.simpleName}\".")
   }
 }
 

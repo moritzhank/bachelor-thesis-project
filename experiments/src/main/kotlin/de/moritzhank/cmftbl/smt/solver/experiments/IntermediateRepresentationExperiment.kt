@@ -40,6 +40,6 @@ fun main() {
 
   println("Running solver ...")
   println("========[ Result of the solver ]========")
-  println(runSmtSolver(smtLib, solver, removeSmt2File))
+  println(runSmtSolver(smtLib, solver, null, removeSmt2File, 120, memoryProfilerCallback = null))
   println("========================================")
 }

@@ -52,6 +52,25 @@ fun <T> generateEqualsITEStructure(
   return iteStructureFront.toString()
 }
 
+/** Generate ITE-structure for SMT-LIB. */
+fun generateAndStructure(
+  elements: Collection<String>,
+): String {
+  require(elements.isNotEmpty())
+  val elements = elements.toMutableList()
+  val lastElem = elements.removeLast()
+  if (elements.isEmpty()) {
+    return lastElem
+  } else {
+    val frontStructure = StringBuilder("")
+    elements.forEach { elem ->
+      frontStructure.append("$elem ")
+    }
+    frontStructure.append(lastElem)
+    return "(and $frontStructure)"
+  }
+}
+
 /** Negate a number. */
 fun Number.negate(): Number {
   require(this != Int.MIN_VALUE) { "Int.MIN_VALUE cannot be negated." }
@@ -75,9 +94,30 @@ fun Number.isNegative(): Boolean {
   }
 }
 
-/** Check interval for correctness. */
-fun Pair<Int, Int>?.check() {
-  if (this == null)
-    return
-  require(this.second > this.first)
+/** Converts integer interval to double interval. */
+fun Pair<Int, Int>?.convert() : Pair<Double, Double> {
+  if (this == null) {
+    return Pair(0.0, Double.POSITIVE_INFINITY)
+  }
+  return Pair(first.toDouble(), second.toDouble())
+}
+
+/** Mirror interval. Note: Double.NEGATIVE_INFINITY or Double.POSITIVE_INFINITY = -∞ or ∞. */
+fun Pair<Double, Double>.mirror() : Pair<Double, Double> {
+  val minus = { n: Double -> if (n == 0.0) 0.0 else -n }
+  val newFirst = if (second == Double.POSITIVE_INFINITY) Double.NEGATIVE_INFINITY else minus(second)
+  val newSecond = if (first == Double.NEGATIVE_INFINITY) Double.POSITIVE_INFINITY else minus(first)
+  return Pair(newFirst, newSecond)
+}
+
+/** Check if interval is mirrored. */
+fun Pair<Double, Double>.isMirrored() : Boolean {
+  return this.first < 0.0
+}
+
+/** Double interval to String. */
+fun Pair<Double, Double>.str(): String {
+  val left = if (first == Double.NEGATIVE_INFINITY) "(-∞" else "[$first"
+  val right = if (second == Double.POSITIVE_INFINITY) "∞)" else "$second]"
+  return "$left,$right"
 }

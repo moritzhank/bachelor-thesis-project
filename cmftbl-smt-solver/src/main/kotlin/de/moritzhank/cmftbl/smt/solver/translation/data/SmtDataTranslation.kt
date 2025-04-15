@@ -64,7 +64,8 @@ fun generateSmtLib(
       // Generate member definition for values
       SmtIntermediateMemberType.VALUE -> {
         val smtPrimitive = memberInfo.memberClass.smtPrimitive()!!
-        if (solver == SmtSolver.YICES && smtPrimitive == SmtPrimitive.STRING) {
+        // All Strings are ignored because of solver performance.
+        if (smtPrimitive == SmtPrimitive.STRING) {
           // Yices does not support strings
           continue
         }

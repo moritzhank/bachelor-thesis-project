@@ -3,10 +3,10 @@ plugins {
     kotlin("plugin.serialization") version "2.0.20"
 }
 
-val experimentClass = "SmtDistinctPerformanceTestKt"
+val experimentClass = "ChangedLaneAndNoRollBeforeIncrementalExperimentKt"
 
 application {
-    mainClass.set("de.haneke.moritz.cmftbl.smt.solver.experiments.$experimentClass")
+    mainClass.set("de.moritzhank.cmftbl.smt.solver.experiments.$experimentClass")
 }
 
 tasks.jar {
