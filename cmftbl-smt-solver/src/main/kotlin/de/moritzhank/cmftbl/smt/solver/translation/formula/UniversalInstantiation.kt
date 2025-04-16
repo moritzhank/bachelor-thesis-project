@@ -43,7 +43,11 @@ private fun instantiateUniversalQuantification(
   }
   val childIndex = parent.children.indexOf(node)
   parent.children.removeAt(childIndex)
-  parent.children.add(childIndex, OrgaEvalNode(instantiatedNodes, evalCtx, "UNIV_INST"))
+  if (node.prevalenceFlag) {
+    parent.children.addAll(childIndex, instantiatedNodes)
+  } else {
+    parent.children.add(childIndex, OrgaEvalNode(instantiatedNodes, evalCtx, "UNIV_INST"))
+  }
 }
 
 

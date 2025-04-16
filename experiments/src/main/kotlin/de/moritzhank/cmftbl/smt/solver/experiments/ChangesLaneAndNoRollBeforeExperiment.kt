@@ -13,7 +13,6 @@ import de.moritzhank.cmftbl.smt.solver.generateSmtLibForSegment
 import de.moritzhank.cmftbl.smt.solver.misc.emptyVehicle
 import de.moritzhank.cmftbl.smt.solver.misc.generateGraphvizCode
 import de.moritzhank.cmftbl.smt.solver.misc.renderTree
-import de.moritzhank.cmftbl.smt.solver.runSmtSolver
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generateSmtLib
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generateVisualization
 import tools.aqua.stars.data.av.dataclasses.*
@@ -57,8 +56,8 @@ fun main() {
   renderTree(graphViz)
   println("Rendered graph.")
 
-  val dataSmtLib = generateSmtLibForSegment(seg, SmtSolver.Z3, "QF_LIRA")
-  val formulaSmtLib = generateSmtLib(visualization)
+  //val dataSmtLib = generateSmtLibForSegment(seg, SmtSolver.Z3, "QF_LIRA")
+  //val formulaSmtLib = generateSmtLib(visualization)
 
   //println(runSmtSolver("$dataSmtLib$formulaSmtLib", SmtSolver.Z3, false, yicesTimeoutInSeconds = 999999999))
 

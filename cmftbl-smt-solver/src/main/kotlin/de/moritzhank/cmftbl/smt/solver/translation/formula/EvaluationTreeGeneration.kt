@@ -7,6 +7,7 @@ import de.moritzhank.cmftbl.smt.solver.misc.ITreeVisualizationNode
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForBinding
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForEvaluableRelation
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForLogicConnective
+import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForMinPrevalence
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForNextPrevious
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generation.generateEvaluationForUntilSince
 import tools.aqua.stars.core.types.EntityType
@@ -156,6 +157,9 @@ internal fun generateEvaluation(
     }
     is UntilSinceFormula -> {
       generateEvaluationForUntilSince(formula, evalCtx, evalType, evalTickIndex, evalInterval)
+    }
+    is MinPrevalence -> {
+      generateEvaluationForMinPrevalence(formula, evalCtx, evalType, evalTickIndex, evalInterval)
     }
     else -> error("The generation is not yet available for the formula type \"${formula::class.simpleName}\".")
   }

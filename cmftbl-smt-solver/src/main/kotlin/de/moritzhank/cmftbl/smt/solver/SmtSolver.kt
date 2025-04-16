@@ -21,7 +21,7 @@ enum class SmtSolver(val solverName: String) {
  * Save the SMT-program [program] in a file.
  * @return Path of the saved program.
  */
-fun saveSmtFile(program: String, solver: SmtSolver = SmtSolver.CVC5, path: String? = null): String {
+fun saveSmtFile(program: String, path: String? = null): String {
   val directory = path?.let { File(path).parent } ?: getAbsolutePathFromProjectDir("_smtTmp")
   val smt2FilePath = path ?: "$directory${File.separator}${UUID.randomUUID()}.smt2"
   File(directory).mkdirs()
@@ -45,7 +45,7 @@ fun runSmtSolver(
   memoryProfilerCallback: ((Long) -> Unit)?,
 ): String {
   val solverBinPath = requireSolverBinPath(solver)
-  val smt2FilePath = saveSmtFile(program, solver, filePath)
+  val smt2FilePath = saveSmtFile(program, filePath)
   val smt2File = File(smt2FilePath)
   val proc = ProcessBuilder(solverBinPath, smt2FilePath, *solverArgs).start()
   // MemoryProfiler should run async

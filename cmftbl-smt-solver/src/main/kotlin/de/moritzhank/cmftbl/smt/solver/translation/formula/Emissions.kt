@@ -124,6 +124,14 @@ internal fun IEmission.tableStr(): String {
   }
 }
 
+/** Represents an emission that ensures a [fraction] of children of [evalNode] hold. */
+internal class PrevalenceOfChildrenEmission(
+  override val emissionID: Int?,
+  val fraction: Double,
+  val evalNode: IEvalNode,
+  override val annotation: String? = null,
+): IEmission
+
 /** Generate a String representation of [IEmission] suitable for visualization. */
 internal fun IEmission.str(): String {
   val annotationInParentheses = if (this.annotation == null) "" else " (${this.annotation})"
@@ -144,6 +152,7 @@ internal fun IEmission.str(): String {
               interval.str()
     }
     is SameTimeEmission -> "tickTime(this) = tickTime($referenceID)"
+    is PrevalenceOfChildrenEmission -> "Subformulae hold for ${fraction * 100}%"
   } + annotationInParentheses
 }
 

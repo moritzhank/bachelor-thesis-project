@@ -289,7 +289,9 @@ internal class UniversalEvalNode(
    * [tickPrecondition] allows this.
    */
   val tickPrecondition: EvaluationTickPrecondition?,
-  val interval: Pair<Double, Double>
+  val interval: Pair<Double, Double>,
+  /** Indicates if the instantiation is for a prevalence computation. */
+  var prevalenceFlag: Boolean = false
 ) : IEvalNode {
 
   override val nodeID: Int = evalCtx.constraintIDGenerator.generateID()
@@ -298,9 +300,11 @@ internal class UniversalEvalNode(
   override var childSatNotRequired = false
 
   override fun getTVNContent(): String {
+    val prevalenceFlagStr = if (!prevalenceFlag) "" else "<TR><TD COLSPAN=\"3\">PREVALENCE_FLAG</TD></TR>"
     val tickPrecondStr = if (tickPrecondition == null) "" else "<TR><TD COLSPAN=\"3\">TickPrecond: " +
             "${tickPrecondition.toHTMLString()}</TD></TR>"
-    return getTVNTableString(nodeID, "UNIV in ${interval.str()}", evaluable::class.simpleName!!, tickPrecondStr)
+    return getTVNTableString(nodeID, "UNIV in ${interval.str()}", evaluable::class.simpleName!!,
+      prevalenceFlagStr + tickPrecondStr)
   }
 
   /** Create an exact copy. */
@@ -315,7 +319,8 @@ internal class UniversalEvalNode(
       evaluable,
       evaluatedTickIndex,
       tickPrecondition?.copy(),
-      interval.copy()
+      interval.copy(),
+      prevalenceFlag
     ).apply {
       childSatNotRequired = childSatNotRequiredCopy
     }

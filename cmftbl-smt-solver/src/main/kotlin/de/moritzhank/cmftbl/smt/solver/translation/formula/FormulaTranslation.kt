@@ -2,6 +2,7 @@ package de.moritzhank.cmftbl.smt.solver.translation.formula
 
 import de.moritzhank.cmftbl.smt.solver.dsl.*
 import de.moritzhank.cmftbl.smt.solver.misc.*
+import kotlin.math.ceil
 
 fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
   require(evalNode is IEvalNode)
@@ -40,14 +41,16 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
           val sort = if (emission.isBool) "Bool" else "Int"
           result.appendLine("(declare-const ${emission.newInstanceID} $sort)")
         }
+
         is BindingTermFromChildEmission -> {
           val term = emission.term
-          val smtTerm = termToSmtRepresentation(term) { v ->
-            node.evalCtx.getSmtID(v.callContext.base())!!
+          val smtTerm = termToSmtRepresentation(term) { b ->
+            node.evalCtx.getSmtID(b)!!
           }
           val emitSmtID = holdVar(emission.emissionID!!)
           result.appendLine("(assert (= $emitSmtID (= ${emission.variableID} $smtTerm)))")
         }
+
         is EvalAtTickConstraintEmission -> {
           require(node is VarIntroNode)
           val ccb = node.referenceCCB
@@ -56,6 +59,7 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
           val emitSmtID = holdVar(emission.emissionID!!)
           result.appendLine("(assert (= $emitSmtID (= (${ccb.tickMemberName()} $varID) (indexToTick $tickIndex))))")
         }
+
         is EvalInIntervalConstraintEmission -> {
           require(node is VarIntroNode)
           val varID = emission.variableID
@@ -67,28 +71,32 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
           val assertion = generateInIntervalSmtString(evaluatedTickIndexSeconds, emission.interval, tickSeconds)
           result.appendLine("(assert (= $emitSmtID $assertion))")
         }
+
         is ConstrainIDEmission -> {
           require(node is VarIntroNode)
           val idOfVar = "(${node.referenceCCB.idMemberName()} ${emission.constraintVariableID})"
           val emitSmtID = holdVar(emission.emissionID!!)
           result.appendLine("(assert (= $emitSmtID (= $idOfVar ${emission.id})))")
         }
+
         is TickWitnessTimeEmission -> {
           require(node is VarIntroNode)
           val emitSmtID = holdVar(emission.emissionID!!)
           result.appendLine("(assert (= $emitSmtID (= (${node.referenceCCB.tickMemberName()} ${emission.witnessID}) ${emission.tickWitnessID})))")
         }
+
         is TermFromChildrenEmission -> {
           require(node is IEvalNodeWithEvaluable)
-          val smtTerm1 = termToSmtRepresentation(emission.term1) { v ->
-            node.evalCtx.getSmtID(v.callContext.base())!!
+          val smtTerm1 = termToSmtRepresentation(emission.term1) { b ->
+            node.evalCtx.getSmtID(b)!!
           }
-          val smtTerm2 = termToSmtRepresentation(emission.term2) { v ->
-            node.evalCtx.getSmtID(v.callContext.base())!!
+          val smtTerm2 = termToSmtRepresentation(emission.term2) { b ->
+            node.evalCtx.getSmtID(b)!!
           }
           val emitSmtID = holdVar(emission.emissionID!!)
           result.appendLine("(assert (= $emitSmtID (${emission.operator.toSMTString()} $smtTerm1 $smtTerm2)))")
         }
+
         is SameTimeEmission -> {
           require(node is VarIntroNode)
           val nodeElemTime = tickDataSeconds("(${node.referenceCCB.tickMemberName()} ${node.emittedID})")
@@ -96,6 +104,7 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
           val emitSmtID = holdVar(emission.emissionID!!)
           result.appendLine("(assert (= $emitSmtID (= $nodeElemTime $refElemTime)))")
         }
+
         is TickIndexExistsInIntervalEmission -> {
           // TODO: CHECK
           val tickIndex = "(indexToTick ${emission.tickIndex})"
@@ -106,6 +115,7 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
           val emitSmtID = holdVar(emission.emissionID!!)
           result.appendLine("(assert (= $emitSmtID (and $firstPart $secondPart)))")
         }
+
         is FormulaeFromChildrenEmission -> {
           // TODO: CHECK
           if (node.children.size == 2) {
@@ -114,6 +124,23 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
             val firstPart = holdVar(emission.evalNode1.nodeID!!)
             val secondPart = holdVar(emission.evalNode2.nodeID!!)
             result.appendLine("(assert (= $emitSmtID ($opStr $firstPart $secondPart)))")
+          }
+        }
+        is PrevalenceOfChildrenEmission -> {
+          // TODO: CHECK
+          val emitSmtID = holdVar(emission.emissionID!!)
+          var holdVars = mutableListOf<String>()
+          emission.evalNode.children.forEach {
+            val nodeID = it.nodeID
+            if (nodeID != null) {
+              holdVars.add(holdVar(nodeID))
+            }
+          }
+          if (holdVars.isNotEmpty()) {
+            val lowerBound = ceil(emission.fraction * holdVars.size).toInt()
+            val iteChain = holdVars.fold("") { acc, elem -> "$acc(ite $elem 1 0) " }.removeSuffix(" ")
+            val iteChainStr = if (holdVars.size == 1) iteChain else "(+ $iteChain)"
+            result.appendLine("(assert (= $emitSmtID (>= $iteChainStr $lowerBound)))")
           }
         }
       }
@@ -145,11 +172,11 @@ fun generateSmtLib(evalNode: ITreeVisualizationNode): String {
   return result.toString()
 }
 
-private fun termToSmtRepresentation(term: Term<*>, baseElem: (Variable<*>) -> String): String {
+private fun termToSmtRepresentation(term: Term<*>, baseElem: (CCB<*>) -> String): String {
   return when (term) {
     is Constant<*> -> term.value.toString()
     is Variable<*> -> {
-      term.callContext.toSmtRepresentation(baseElem(term))
+      term.callContext.toSmtRepresentation(baseElem)
     }
   }
 }
