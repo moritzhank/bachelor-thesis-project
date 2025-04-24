@@ -3,10 +3,8 @@ plugins {
     kotlin("plugin.serialization") version "2.0.20"
 }
 
-val experimentClass = "ChangedLaneAndNoRollBeforeIncrementalExperimentKt"
-
 application {
-    mainClass.set("de.moritzhank.cmftbl.smt.solver.experiments.$experimentClass")
+    mainClass.set("de.moritzhank.cmftbl.smt.solver.MainKt")
 }
 
 tasks.jar {
@@ -14,9 +12,9 @@ tasks.jar {
 }
 
 tasks.distZip {
-    archiveFileName.set("${experimentClass.dropLast(2)}.zip")
+    archiveFileName.set("experiments.zip")
     destinationDirectory.set(rootProject.file("_experiment${File.separator}"))
-    into("${experimentClass.dropLast(2)}/bin/") {
+    into("experiments/bin/") {
         from("src/main/resources/")
         include("*/*")
     }
