@@ -1,8 +1,5 @@
 package de.moritzhank.cmftbl.smt.solver.experiments
 
-import com.xenomachina.argparser.ArgParser
-import com.xenomachina.argparser.default
-import com.xenomachina.argparser.mainBody
 import de.moritzhank.cmftbl.smt.solver.ExperimentLoader
 import de.moritzhank.cmftbl.smt.solver.SmtSolver
 import de.moritzhank.cmftbl.smt.solver.dsl.CCB
@@ -73,7 +70,15 @@ private val changedLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
   }.apply { ccb.debugInfo = "l" }
 }
 
-fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int? = null) {
+fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int? = null, params: String) {
+  val params = params.split(" ")
+  val town = params[0]
+  val seed = params[1]
+  val segmentID = params[2].toInt()
+  val vehicleID = params[3].toInt()
+  val paramStr = "(town: $town, seed: $seed, segmentID: $segmentID, vehicleID: $vehicleID)"
+  println("Running ChangedLaneAndNoRollBeforeIncremental with $paramStr")
+
   val resMaxSolverMemUsageGBLambda: (List<Long>) -> String = { list ->
     val avg = list.avgWithoutInvalids()
     if (avg == -1L) "-1" else "${MemoryProfiler.bytesToGB(avg)}"
@@ -81,10 +86,8 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
   val resTimeSLambda : (Array<Long>) -> String = { arr ->
     (1.0 * (arr.fold(0L) { acc, elem -> acc + elem }) / (arr.size * 1_000L)).toString()
   }
-
   // Setup
-  val segment: Segment = ExperimentLoader.loadTestSegments("10HD", "3")[10]
-  val vehicleID = 126
+  val segment: Segment = ExperimentLoader.loadTestSegments(town, seed)[segmentID]
   val ticks = segment.tickData.map { it.currentTick.tickSeconds }.toTypedArray()
   val fullEvalNode = changedLaneAndNoRollBefore.generateVisualization(emptyVehicle(id = vehicleID), "v", ticks)
   val nodesThatCanBeSliced = fullEvalNode.iterator().asSequence().filter { it.emitsSomething() }.toList()
@@ -152,17 +155,4 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
   val outputFile = "$runDir${File.separator}graph_${getDateTimeString()}.png"
   plotPerf(resYices, resZ3, resCVC5, title = "ChangedLaneAndNoRollBefore incremental test", xLabel = "Cut level",
     legendPosition = LegendPosition.BEST, outputFile = outputFile, rmMemPlot = !useMemProfiler)
-}
-
-private class ChangedLaneAndNoRollBeforeIncrementalTestArgs(parser: ArgParser) {
-  val disableMemoryProfiler by parser.flagging("-D", "--disable_memory_profiler", help = "Disable memory profiler")
-  val timeout by parser.storing("-T", "--timeout", help = "Specifies the timeout for the solver in seconds") {
-    this.toInt()
-  }.default(null)
-}
-
-fun main(args: Array<String>) = mainBody {
-  ArgParser(args).parseInto(::ChangedLaneAndNoRollBeforeIncrementalTestArgs).run {
-    runChangedLaneAndNoRollBeforeIncrementalTest(!disableMemoryProfiler, timeout)
-  }
 }

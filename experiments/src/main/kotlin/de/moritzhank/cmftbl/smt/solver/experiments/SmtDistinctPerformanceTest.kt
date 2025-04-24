@@ -1,8 +1,5 @@
 package de.moritzhank.cmftbl.smt.solver.experiments
 
-import com.xenomachina.argparser.ArgParser
-import com.xenomachina.argparser.default
-import com.xenomachina.argparser.mainBody
 import de.moritzhank.cmftbl.smt.solver.SmtSolver
 import de.moritzhank.cmftbl.smt.solver.misc.MemoryProfiler
 import de.moritzhank.cmftbl.smt.solver.misc.avgWithoutInvalids
@@ -117,17 +114,4 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
   val outputFile = "${SmtDistinctPerformanceTest().getRunDirectoryPath(runID)}${fSep}graph_${getDateTimeString()}.png"
   plotPerf(resZ3, resYices, resCVC5, title = "Distinct Experiment", xLabel = "Unterschiedliche Individuen",
     legendPosition = LegendPosition.BEST, outputFile = outputFile, rmMemPlot = !useMemProfiler)
-}
-
-private class SmtDistinctPerformanceArgs(parser: ArgParser) {
-  val disableMemoryProfiler by parser.flagging("-D", "--disable_memory_profiler", help = "Disable memory profiler")
-  val timeout by parser.storing("-T", "--timeout", help = "Specifies the timeout for the solver in seconds") {
-    this.toInt()
-  }.default(null)
-}
-
-fun main(args: Array<String>) = mainBody {
-  ArgParser(args).parseInto(::SmtDistinctPerformanceArgs).run {
-    runSmtDistinctPerformanceTest(!disableMemoryProfiler, timeout)
-  }
 }

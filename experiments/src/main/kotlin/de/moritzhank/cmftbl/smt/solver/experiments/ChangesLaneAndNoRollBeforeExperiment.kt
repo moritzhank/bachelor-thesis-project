@@ -3,17 +3,14 @@
 package de.moritzhank.cmftbl.smt.solver.experiments
 
 import de.moritzhank.cmftbl.smt.solver.ExperimentLoader
-import de.moritzhank.cmftbl.smt.solver.SmtSolver
 import de.moritzhank.cmftbl.smt.solver.dsl.CCB
 import de.moritzhank.cmftbl.smt.solver.dsl.FormulaBuilder.Companion.formula
 import de.moritzhank.cmftbl.smt.solver.dsl.formulaToLatex
 import de.moritzhank.cmftbl.smt.solver.dsl.renderLatexFormula
 import de.moritzhank.cmftbl.smt.solver.dsl.times
-import de.moritzhank.cmftbl.smt.solver.generateSmtLibForSegment
 import de.moritzhank.cmftbl.smt.solver.misc.emptyVehicle
 import de.moritzhank.cmftbl.smt.solver.misc.generateGraphvizCode
 import de.moritzhank.cmftbl.smt.solver.misc.renderTree
-import de.moritzhank.cmftbl.smt.solver.translation.formula.generateSmtLib
 import de.moritzhank.cmftbl.smt.solver.translation.formula.generateVisualization
 import tools.aqua.stars.data.av.dataclasses.*
 
