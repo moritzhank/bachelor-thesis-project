@@ -25,6 +25,7 @@ private class SmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout
     memoryProfilerSampleRateMs = 10
     useMemoryProfiler = useMemProfiler
     timeOutInSeconds = timeout
+    fileName = { expSetup -> "distinctIndividuals_${expSetup.identifier}.smt2" }
   }
 
   override val memoryProfilerWorkingCond: (MemoryProfiler) -> Boolean = { memProfiler ->
