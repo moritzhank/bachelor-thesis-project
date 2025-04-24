@@ -23,6 +23,7 @@ interface PerfExperimentSetup {
       SmtSolver.CVC5 -> arrayOf()
       SmtSolver.Z3 -> arrayOf()
       SmtSolver.YICES -> arrayOf()
+      SmtSolver.MATHSAT -> arrayOf()
     }
   }
 
@@ -155,6 +156,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
     return when(solver) {
       SmtSolver.CVC5, SmtSolver.YICES -> "--stats"
       SmtSolver.Z3 -> "-st"
+      SmtSolver.MATHSAT -> "-stats"
     }
   }
 
@@ -164,8 +166,9 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
     }
     return when(solver) {
       SmtSolver.CVC5 -> "--tlimit=${timeOutInSeconds * 1000}"
-      SmtSolver.YICES -> "--timeout=$timeOutInSeconds"
+      SmtSolver.YICES -> ""
       SmtSolver.Z3 -> "-T:$timeOutInSeconds"
+      SmtSolver.MATHSAT -> ""
     }
   }
 
@@ -183,6 +186,10 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
         val prefix = " :total-run-time "
         Duration.parse(output.lines().first { it.startsWith(prefix) }.drop(prefix.length) + "s")
       }
+      SmtSolver.MATHSAT -> {
+        val prefix = " :time-seconds "
+        Duration.parse(output.lines().first { it.startsWith(prefix) }.drop(prefix.length) + "s")
+      }
     }
   }
 
@@ -194,7 +201,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
       SmtSolver.Z3 -> {
         output.lines().getOrNull(2)?.startsWith("timeout", true) == true
       }
-      SmtSolver.YICES -> {
+      SmtSolver.YICES, SmtSolver.MATHSAT -> {
         output.lines().getOrNull(1)?.isNotEmpty() == true
       }
     }

@@ -14,7 +14,8 @@ import java.util.concurrent.TimeUnit
 enum class SmtSolver(val solverName: String) {
   CVC5("cvc5"),
   Z3("z3"),
-  YICES("yices")
+  YICES("yices"),
+  MATHSAT("mathsat")
 }
 
 /**
@@ -53,8 +54,8 @@ fun runSmtSolver(
     memoryProfilerCallback?.invoke(proc.pid())
   }
   var timeoutOccurred = false
-  // Handle timeout for Yices2
-  if (solver == SmtSolver.YICES && manualTimeoutInSeconds != null) {
+  // Handle timeout for Yices2 and MathSAT
+  if ((solver == SmtSolver.YICES || solver == SmtSolver.MATHSAT) && manualTimeoutInSeconds != null) {
     timeoutOccurred = !proc.waitFor(manualTimeoutInSeconds.toLong(), TimeUnit.SECONDS)
     if (proc.isAlive) {
       proc.destroyForcibly().waitFor()
@@ -88,6 +89,7 @@ fun smtSolverVersion(solver: SmtSolver): String {
         SmtSolver.CVC5 -> "--version"
         SmtSolver.Z3 -> "--version"
         SmtSolver.YICES -> "--version"
+        SmtSolver.MATHSAT -> "-version"
       }
   val proc = ProcessBuilder(solverBinPath, versionOption).start().apply { waitFor() }
   val result = proc.inputReader().readText() + proc.errorReader().readText()
@@ -97,5 +99,8 @@ fun smtSolverVersion(solver: SmtSolver): String {
     }
     SmtSolver.Z3 -> result.dropLastWhile { it != '-' }.dropLast(2).removePrefix("Z3 version ")
     SmtSolver.YICES -> result.lines().first().removePrefix("Yices ")
+    SmtSolver.MATHSAT -> {
+      result.split(' ')[2]
+    }
   }
 }

@@ -17,7 +17,7 @@ fun generateSmtLib(
 ): String {
   val result = StringBuilder()
   val termForNegativeNumber =
-      if (solver == SmtSolver.YICES) {
+      if (solver == SmtSolver.YICES || solver == SmtSolver.MATHSAT) {
         { x: Number -> "(- 0 ${x.negate()._toSmtLibPrimitiveFormat()})" }
       } else {
         { x: Number -> x._toSmtLibPrimitiveFormat() }
@@ -86,7 +86,8 @@ fun generateSmtLib(
       }
       // Generate member definition for lists
       SmtIntermediateMemberType.REFERENCE_LIST -> {
-        if (solver == SmtSolver.YICES && memberInfo.listArgumentClass == String::class.java) {
+        // All Strings are ignored because of solver performance.
+        if (memberInfo.listArgumentClass == String::class.java) {
           // Yices does not support strings
           continue
         }

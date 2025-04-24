@@ -11,9 +11,10 @@ import de.moritzhank.cmftbl.smt.solver.misc.getAbsolutePathFromProjectDir
 /** Contains all relevant settings for local SMT-solver instances. */
 @Serializable
 data class SmtSolverSettings(
-    var pathToCVC5Bin: String,
-    var pathToz3Bin: String,
-    var pathToYicesBin: String
+  var pathToCVC5Bin: String,
+  var pathToz3Bin: String,
+  var pathToYicesBin: String,
+  var pathToMathSATBin: String
 ) {
 
   companion object {
@@ -31,7 +32,7 @@ data class SmtSolverSettings(
 
     /** Generate empty "smtSolverSettings.json". */
     fun generateTemplate() {
-      File(settingsFilePath).writeText(Json.encodeToString(SmtSolverSettings("", "", "")))
+      File(settingsFilePath).writeText(Json.encodeToString(SmtSolverSettings("", "", "", "")))
     }
   }
 
@@ -41,6 +42,7 @@ data class SmtSolverSettings(
       SmtSolver.CVC5 -> pathToCVC5Bin
       SmtSolver.Z3 -> pathToz3Bin
       SmtSolver.YICES -> pathToYicesBin
+      SmtSolver.MATHSAT -> pathToMathSATBin
     }
   }
 }
