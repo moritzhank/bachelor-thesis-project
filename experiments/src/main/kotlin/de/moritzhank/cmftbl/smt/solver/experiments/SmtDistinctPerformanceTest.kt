@@ -1,10 +1,11 @@
 package de.moritzhank.cmftbl.smt.solver.experiments
 
 import de.moritzhank.cmftbl.smt.solver.SmtSolver
+import de.moritzhank.cmftbl.smt.solver.misc.Logger
 import de.moritzhank.cmftbl.smt.solver.misc.MemoryProfiler
 import de.moritzhank.cmftbl.smt.solver.misc.avgWithoutInvalids
+import de.moritzhank.cmftbl.smt.solver.misc.getDateTimeString
 import de.moritzhank.cmftbl.smt.solver.scripts.LegendPosition
-import de.moritzhank.cmftbl.smt.solver.scripts.getDateTimeString
 import de.moritzhank.cmftbl.smt.solver.scripts.linSpaceArr
 import de.moritzhank.cmftbl.smt.solver.scripts.plotPerf
 import de.moritzhank.cmftbl.smt.solver.smtSolverVersion
@@ -72,10 +73,13 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
 
   // CVC5
   val cvc5Version = smtSolverVersion(SmtSolver.CVC5)
-  val resCVC5 = SmtDistinctPerformanceTest(useMemProfiler, timeout).runExperiment(
+  val cvc5Dir = SmtDistinctPerformanceTest().getRunDirectoryPath(runID, SmtSolver.CVC5)
+  val resCVC5 = SmtDistinctPerformanceTest(useMemProfiler, timeout).apply {
+    logger = Logger.new("$cvc5Dir${File.separator}log.txt")
+  }.runExperiment(
     rangeOfDistinctStatements,
     SmtSolver.CVC5,
-    "UF",
+    "QF_UF",
     1,
     "#808080",
     "CVC5 v$cvc5Version",
@@ -84,12 +88,32 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     resMaxSolverMemUsageGBLambda
   )
 
+  // MathSAT
+  val mathSATVersion = smtSolverVersion(SmtSolver.MATHSAT)
+  val mathSATDir = SmtDistinctPerformanceTest().getRunDirectoryPath(runID, SmtSolver.MATHSAT)
+  val resMathSAT = SmtDistinctPerformanceTest(useMemProfiler, timeout).apply {
+    logger = Logger.new("$mathSATDir${File.separator}log.txt")
+  }.runExperiment(
+    rangeOfDistinctStatements,
+    SmtSolver.MATHSAT,
+    "QF_UF",
+    1,
+    "#44B7C2",
+    "MathSAT v$mathSATVersion",
+    runID,
+    resTimeSLambda,
+    resMaxSolverMemUsageGBLambda
+  )
+
   // Z3
   val z3Version = smtSolverVersion(SmtSolver.Z3)
-  val resZ3 = SmtDistinctPerformanceTest(useMemProfiler, timeout).runExperiment(
+  val z3Dir = SmtDistinctPerformanceTest().getRunDirectoryPath(runID, SmtSolver.Z3)
+  val resZ3 = SmtDistinctPerformanceTest(useMemProfiler, timeout).apply {
+    logger = Logger.new("$z3Dir${File.separator}log.txt")
+  }.runExperiment(
     rangeOfDistinctStatements,
     SmtSolver.Z3,
-    "UF",
+    "QF_UF",
     1,
     "#034B7B",
     "Z3 v$z3Version",
@@ -100,10 +124,13 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
 
   // YICES
   val yicesVersion = smtSolverVersion(SmtSolver.YICES)
-  val resYices = SmtDistinctPerformanceTest(useMemProfiler, timeout).runExperiment(
+  val yicesDir = SmtDistinctPerformanceTest().getRunDirectoryPath(runID, SmtSolver.YICES)
+  val resYices = SmtDistinctPerformanceTest(useMemProfiler, timeout).apply {
+    logger = Logger.new("$yicesDir${File.separator}log.txt")
+  }.runExperiment(
     rangeOfDistinctStatements,
     SmtSolver.YICES,
-    "UF",
+    "QF_UF",
     1,
     "#44B7C2",
     "Yices v$yicesVersion",
@@ -111,8 +138,9 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
   )
+
   val fSep = File.separator
   val outputFile = "${SmtDistinctPerformanceTest().getRunDirectoryPath(runID)}${fSep}graph_${getDateTimeString()}.png"
-  plotPerf(resZ3, resYices, resCVC5, title = "Distinct Experiment", xLabel = "Unterschiedliche Individuen",
+  plotPerf(resZ3, resYices, resCVC5, resMathSAT, title = "Distinct Experiment", xLabel = "Unterschiedliche Individuen",
     legendPosition = LegendPosition.BEST, outputFile = outputFile, rmMemPlot = !useMemProfiler)
 }

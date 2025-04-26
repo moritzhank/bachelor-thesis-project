@@ -8,7 +8,6 @@ import de.moritzhank.cmftbl.smt.solver.dsl.times
 import de.moritzhank.cmftbl.smt.solver.generateSmtLibForSegment
 import de.moritzhank.cmftbl.smt.solver.misc.*
 import de.moritzhank.cmftbl.smt.solver.scripts.LegendPosition
-import de.moritzhank.cmftbl.smt.solver.scripts.getDateTimeString
 import de.moritzhank.cmftbl.smt.solver.scripts.plotPerf
 import de.moritzhank.cmftbl.smt.solver.smtSolverVersion
 import de.moritzhank.cmftbl.smt.solver.translation.formula.emitsSomething
@@ -112,7 +111,11 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
 
   // YICES
   val yicesVersion = smtSolverVersion(SmtSolver.YICES)
-  val resYices = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).runExperiment(
+  val yicesDir = ChangedLaneAndNoRollBeforeIncrementalTest().getRunDirectoryPath(runID, SmtSolver.YICES)
+  val yicesLogger = Logger.new("$yicesDir${File.separator}log.txt")
+  val resYices = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).apply {
+    logger = yicesLogger
+  }.runExperiment(
     listOfExperiments,
     SmtSolver.YICES,
     "QF_LIRA",
@@ -124,9 +127,29 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     resMaxSolverMemUsageGBLambda
   )
 
+  // MATHSAT
+  val mathSATVersion = smtSolverVersion(SmtSolver.MATHSAT)
+  val mathSATDir = ChangedLaneAndNoRollBeforeIncrementalTest().getRunDirectoryPath(runID, SmtSolver.MATHSAT)
+  val resMathSAT = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).apply {
+    logger = Logger.new("$mathSATDir${File.separator}log.txt")
+  }.runExperiment(
+    listOfExperiments,
+    SmtSolver.MATHSAT,
+    "QF_LIRA",
+    1,
+    "#44B7C2",
+    "MathSAT v$mathSATVersion",
+    runID,
+    resTimeSLambda,
+    resMaxSolverMemUsageGBLambda
+  )
+
   // Z3
   val z3Version = smtSolverVersion(SmtSolver.Z3)
-  val resZ3 = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).runExperiment(
+  val z3Dir = ChangedLaneAndNoRollBeforeIncrementalTest().getRunDirectoryPath(runID, SmtSolver.Z3)
+  val resZ3 = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).apply {
+    logger = Logger.new("$z3Dir${File.separator}log.txt")
+  }.runExperiment(
     listOfExperiments,
     SmtSolver.Z3,
     "QF_LIRA",
@@ -140,7 +163,10 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
 
   // CVC5
   val cvc5Version = smtSolverVersion(SmtSolver.CVC5)
-  val resCVC5 = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).runExperiment(
+  val cvc5Dir = ChangedLaneAndNoRollBeforeIncrementalTest().getRunDirectoryPath(runID, SmtSolver.CVC5)
+  val resCVC5 = ChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler, timeout).apply {
+    logger = Logger.new("$cvc5Dir${File.separator}log.txt")
+  }.runExperiment(
     listOfExperiments,
     SmtSolver.CVC5,
     "QF_LIRA",
@@ -153,6 +179,6 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
   )
 
   val outputFile = "$runDir${File.separator}graph_${getDateTimeString()}.png"
-  plotPerf(resYices, resZ3, resCVC5, title = "ChangedLaneAndNoRollBefore incremental test", xLabel = "Cut level",
+  plotPerf(resYices, resZ3, resCVC5, resMathSAT, title = "ChangedLaneAndNoRollBefore incremental test", xLabel = "Cut level",
     legendPosition = LegendPosition.BEST, outputFile = outputFile, rmMemPlot = !useMemProfiler)
 }

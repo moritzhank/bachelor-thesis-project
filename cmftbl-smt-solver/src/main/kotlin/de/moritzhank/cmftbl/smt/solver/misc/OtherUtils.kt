@@ -1,5 +1,8 @@
 package de.moritzhank.cmftbl.smt.solver.misc
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 /** Replaces first character with a lower-case one. */
 fun String.firstCharLower(): String = this.replaceFirstChar { it.lowercaseChar() }
 
@@ -120,4 +123,16 @@ fun Pair<Double, Double>.str(): String {
   val left = if (first == Double.NEGATIVE_INFINITY) "(-∞" else "[$first"
   val right = if (second == Double.POSITIVE_INFINITY) "∞)" else "$second]"
   return "$left,$right"
+}
+
+/** Generate String of date and time. */
+fun getDateTimeString(
+  dSep: Char = '_',
+  tSep: Char = '_',
+  sep: String = "_",
+  millisOfDays: Boolean = true
+): String {
+  val timeString = if (millisOfDays) "AAAA" else "HH${tSep}mm${tSep}ss"
+  return LocalDateTime.now()
+    .format(DateTimeFormatter.ofPattern("yyyy${dSep}MM${dSep}dd${sep}$timeString"))
 }

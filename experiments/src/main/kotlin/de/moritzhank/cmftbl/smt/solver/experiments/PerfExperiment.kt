@@ -3,14 +3,17 @@
 package de.moritzhank.cmftbl.smt.solver.experiments
 
 import de.moritzhank.cmftbl.smt.solver.SmtSolver
+import de.moritzhank.cmftbl.smt.solver.misc.Logger
 import de.moritzhank.cmftbl.smt.solver.misc.MemoryProfiler
 import de.moritzhank.cmftbl.smt.solver.misc.getAbsolutePathFromProjectDir
+import de.moritzhank.cmftbl.smt.solver.misc.getDateTimeString
 import de.moritzhank.cmftbl.smt.solver.runSmtSolver
-import de.moritzhank.cmftbl.smt.solver.scripts.getDateTimeString
 import de.moritzhank.cmftbl.smt.solver.smtSolverVersion
 import oshi.SystemInfo
 import java.io.File
 import java.util.*
+import kotlin.collections.any
+import kotlin.collections.map
 import kotlin.math.pow
 import kotlin.time.Duration
 
@@ -34,6 +37,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
   private val expFolderName = "_experiment${File.separator}${name.replaceFirstChar { it.lowercase() }}"
   /** Returns the experiment path, guaranteed without '\' or '/' at the end. */
   val expFolderPath = getAbsolutePathFromProjectDir(expFolderName)
+  var logger: Logger? = null
   abstract val memoryProfilerWorkingCond: (MemoryProfiler) -> Boolean
   protected var useMemoryProfiler = true
   protected var memoryProfilerSampleRateMs = 100
@@ -82,8 +86,10 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
     // Run experiment
     val results = Array(experiments.size) { Array(repetitions) { -1L } }
     val memoryStats = Array(experiments.size) { Array(repetitions) { Pair(-1.0, -1L) } }
-    val runDirectoryPath = getRunDirectoryPath(runID)
+    val runDirectoryPath = getRunDirectoryPath(runID, solver)
     File(runDirectoryPath).mkdirs()
+    val resultCSVPath = "$runDirectoryPath${File.separator}results.csv"
+    generateResultCSV(repetitions, solver, logic, color, label, resultCSVPath)
     run experiments@{
       experiments.forEachIndexed { i, setup ->
         val smtLib = generateSmtLib(setup, solver, logic)
@@ -91,7 +97,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
         (0 ..< repetitions).forEach { j ->
           val args = mutableListOf(getTimeOutArg(solver, timeOutInSeconds), getStatsArg(solver),
             *setup.specialSolverArgs(solver)).apply { removeIf { it.isEmpty() } }.toTypedArray()
-          val result = runSmtSolver(smtLib, solver, filePath, false, timeOutInSeconds, *args) { pid ->
+          val result = runSmtSolver(smtLib, solver, filePath, false, timeOutInSeconds, *args, logger = logger) { pid ->
             if (useMemoryProfiler) {
               val memProfiler = MemoryProfiler.start(pid.toInt(), memoryProfilerSampleRateMs)
               if (memoryProfilerWorkingCond(memProfiler)) {
@@ -99,58 +105,84 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
               }
             }
           }
-          // Write log file
-          val logFile = File("${filePath}_${solver.solverName}.log")
-          logFile.writeText(result)
           // Timeout occurred
+          val currentMemoryStats = memoryStats[i][j]
           if (didTimeoutOccurInOutput(solver, result)) {
+            logger?.log("${solver.solverName} timed out for $setup $currentMemoryStats.")
             memoryStats[i][j] = Pair(-1.0, -1L)
-            println("${solver.solverName} timed out for $setup.")
             return@experiments
           }
           // Error occurred
           if (extractExitCodeFromOutput(result) != 0) {
+            logger?.log("${solver.solverName} had an error for $setup $currentMemoryStats.")
             memoryStats[i][j] = Pair(-1.0, -1L)
-            println("${solver.solverName} had an error for $setup.")
           } else {
             val resultingTime = extractDurationFromOutput(solver, result).inWholeMilliseconds
             results[i][j] = resultingTime
-            println("${solver.solverName} took ${resultingTime}ms for $setup.")
+            logger?.log("${solver.solverName} took ${resultingTime}ms for $setup.")
           }
         }
-      }
-    }
-
-    // Persist results into csv
-    val timeCols = (1..repetitions).fold("") { acc, i -> "$acc\"time$i\", " }.dropLast(2)
-    val maxSysMemUsagePCols = (1..repetitions).fold("") { acc, i -> "$acc\"maxSysMemUsage%$i\", " }.dropLast(2)
-    val maxSolverMemUsageBCols = (1..repetitions).fold("") { acc, i -> "$acc\"maxSolverMemUsageB$i\", " }.dropLast(2)
-    val csv = StringBuilder()
-    csv.appendLine(generateDetailsComment(solver, logic, "\"$name\"-Benchmark", color, label))
-    csv.appendLine("\"identifier\", $timeCols, $maxSysMemUsagePCols, $maxSolverMemUsageBCols, \"resTime\", \"resMaxSolverMemUsageGB\"")
-    run timeRows@{
-      experiments.forEachIndexed { i, setup ->
-        if (results[i].any { it == -1L }) {
-          return@timeRows
+        if (results[i].all { it != -1L }) {
+          addRowToCSV(repetitions, results[i], memoryStats[i], resTime, resMaxSolverMemUsageGB, setup, resultCSVPath)
         }
-        val resultTimeCols = (0 ..< repetitions).fold("") { acc, j -> acc + "${results[i][j]}, " }.dropLast(2)
-        val resultMaxSysMemUsagePCols = (0 ..< repetitions).fold("") { acc, j ->
-          acc + "%.2f, ".format(Locale.ENGLISH, memoryStats[i][j].first)
-        }.dropLast(2)
-        val resultMaxSolverMemUsageBCols = (0 ..< repetitions).fold("") { acc, j ->
-          acc + "${memoryStats[i][j].second}, "
-        }.dropLast(2)
-        val r1 = resTime(results[i])
-        val r2 = resMaxSolverMemUsageGB(memoryStats[i].map { it.second })
-        csv.appendLine("${setup.identifier}, $resultTimeCols, $resultMaxSysMemUsagePCols, $resultMaxSolverMemUsageBCols, $r1, $r2")
       }
     }
-    val resultCsvFile = File("$runDirectoryPath${File.separator}${solver.solverName}_${getDateTimeString()}.csv")
-    resultCsvFile.writeText(csv.toString())
-    return resultCsvFile.absolutePath
+    return resultCSVPath
   }
 
-  fun getRunDirectoryPath(runID: String) = "$expFolderPath${File.separator}$runID"
+  fun generateResultCSV(
+    repetitions: Int,
+    solver: SmtSolver,
+    logic: String,
+    color: String,
+    label: String,
+    path: String
+  ) {
+    try {
+      val timeCols = (1..repetitions).fold("") { acc, i -> "$acc\"time$i\", " }.dropLast(2)
+      val maxSysMemUsagePCols = (1..repetitions).fold("") { acc, i -> "$acc\"maxSysMemUsage%$i\", " }.dropLast(2)
+      val maxSolverMemUsageBCols = (1..repetitions).fold("") { acc, i -> "$acc\"maxSolverMemUsageB$i\", " }.dropLast(2)
+      val csv = StringBuilder()
+      csv.appendLine(generateDetailsComment(solver, logic, "\"$name\"-Benchmark", color, label))
+      csv.appendLine("\"identifier\", $timeCols, $maxSysMemUsagePCols, $maxSolverMemUsageBCols, \"resTime\", \"resMaxSolverMemUsageGB\"")
+      val resultCSVFile = File(path)
+      resultCSVFile.writeText(csv.toString())
+    } catch (e: Exception) {
+      logger?.log("An error occurred during the initialization of $path.")
+      e.printStackTrace()
+    }
+  }
+
+  fun addRowToCSV(
+    repetitions: Int,
+    times: Array<Long>,
+    memoryStats: Array<Pair<Double, Long>>,
+    resTime: (Array<Long>) -> String,
+    resMaxSolverMemUsageGB: (List<Long>) -> String,
+    setup: T,
+    path: String
+  ) {
+    try {
+      val resultTimeCols = (0 ..< repetitions).fold("") { acc, j -> acc + "${times[j]}, " }.dropLast(2)
+      val resultMaxSysMemUsagePCols = (0 ..< repetitions).fold("") { acc, j ->
+        acc + "%.2f, ".format(Locale.ENGLISH, memoryStats[j].first)
+      }.dropLast(2)
+      val resultMaxSolverMemUsageBCols = (0 ..< repetitions).fold("") { acc, j ->
+        acc + "${memoryStats[j].second}, "
+      }.dropLast(2)
+      val r1 = resTime(times)
+      val r2 = resMaxSolverMemUsageGB(memoryStats.map { it.second })
+      val row = "${setup.identifier}, $resultTimeCols, $resultMaxSysMemUsagePCols, $resultMaxSolverMemUsageBCols, $r1, $r2"
+      val resultCSVFile = File(path)
+      resultCSVFile.appendText(row)
+    } catch (e: Exception) {
+      logger?.log("An error occurred during addition of a row to $path.")
+      e.printStackTrace()
+    }
+  }
+
+  fun getRunDirectoryPath(runID: String, solver: SmtSolver? = null) =
+    "$expFolderPath${File.separator}$runID" + (solver?.let { "${File.separator}${it.solverName}" } ?: "")
 
   private fun getStatsArg(solver: SmtSolver): String {
     return when(solver) {

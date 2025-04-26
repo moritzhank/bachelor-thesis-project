@@ -2,6 +2,7 @@
 
 package de.moritzhank.cmftbl.smt.solver
 
+import de.moritzhank.cmftbl.smt.solver.misc.Logger
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import de.moritzhank.cmftbl.smt.solver.misc.getAbsolutePathFromProjectDir
@@ -43,11 +44,16 @@ fun runSmtSolver(
   removeSmt2File: Boolean,
   manualTimeoutInSeconds: Int?,
   vararg solverArgs: String,
-  memoryProfilerCallback: ((Long) -> Unit)?,
+  logger: Logger? = null,
+  memoryProfilerCallback: ((Long) -> Unit)?
 ): String {
   val solverBinPath = requireSolverBinPath(solver)
   val smt2FilePath = saveSmtFile(program, filePath)
   val smt2File = File(smt2FilePath)
+  val solverArgsStr = solverArgs.fold("") { acc, str -> "$acc$str " }.trimEnd(' ')
+  val memoryProfilerStr = memoryProfilerCallback?.let { " and memoryProfilerCallback is set" } ?: ""
+  logger?.log("Manual timeout in seconds is $manualTimeoutInSeconds$memoryProfilerStr.")
+  logger?.log("Executing command $solverBinPath $smt2FilePath $solverArgsStr ...")
   val proc = ProcessBuilder(solverBinPath, smt2FilePath, *solverArgs).start()
   // MemoryProfiler should run async
   GlobalScope.launch {
@@ -57,11 +63,11 @@ fun runSmtSolver(
   // Handle timeout for Yices2 and MathSAT
   if ((solver == SmtSolver.YICES || solver == SmtSolver.MATHSAT) && manualTimeoutInSeconds != null) {
     timeoutOccurred = !proc.waitFor(manualTimeoutInSeconds.toLong(), TimeUnit.SECONDS)
-    if (proc.isAlive) {
-      proc.destroyForcibly().waitFor()
-    }
   } else {
     proc.waitFor()
+  }
+  if (proc.isAlive) {
+    proc.destroyForcibly().waitFor()
   }
   val exitCode = proc.exitValue()
   // Has run into timeout
@@ -69,13 +75,13 @@ fun runSmtSolver(
     if (removeSmt2File) {
       smt2File.delete()
     }
-    return "Exited with $exitCode.\nManual interruption of process due to timeout."
+    return "Exited with $exitCode.\nManual interruption of process due to timeout.".apply { logger?.log(this) }
   }
   val result = "Exited with $exitCode.\n\n" + proc.inputReader().readText() + proc.errorReader().readText()
   if (removeSmt2File) {
     smt2File.delete()
   }
-  return result
+  return result.apply { logger?.log(this) }
 }
 
 /**
