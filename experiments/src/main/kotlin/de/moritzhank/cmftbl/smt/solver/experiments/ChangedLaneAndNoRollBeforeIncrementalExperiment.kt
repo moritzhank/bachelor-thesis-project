@@ -71,6 +71,10 @@ private val changedLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
 
 fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int? = null, params: String) {
   val params = params.split(" ")
+  if (params.size != 4) {
+    println("Für dieses Experiment werden die Parameter town, seed, segmentID und vehicleID benötigt.")
+    return
+  }
   val town = params[0]
   val seed = params[1]
   val segmentID = params[2].toInt()
