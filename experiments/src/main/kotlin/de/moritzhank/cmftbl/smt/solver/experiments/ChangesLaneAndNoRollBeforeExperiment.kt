@@ -36,8 +36,20 @@ private val changesLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
   }
 }
 
+private val tmp = formula { v: CCB<Vehicle> ->
+  binding(term(v * Vehicle::lane)) { l ->
+    eventually {
+      (term(v * Vehicle::lane * Lane::laneId) ne term(l * Lane::laneId)) and
+              (term(v * Vehicle::lane * Lane::road * Road::id) eq term(l * Lane::road * Road::id))
+    }
+  }.apply { ccb.debugInfo = "l" }
+}
+
 fun main() {
   val ccb = CCB<Vehicle>(Vehicle::class).apply { debugInfo = "v" }
+
+  println(formulaToLatex(tmp(ccb)))
+  return
 
   //Viewing Town 10HD, Seed 3, Segment 10, Vehicle 126
   val seg: Segment = ExperimentLoader.loadTestSegments("10HD", "3")[10]

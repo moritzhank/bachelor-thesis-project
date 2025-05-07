@@ -1,10 +1,7 @@
 package de.moritzhank.cmftbl.smt.solver.experiments
 
 import de.moritzhank.cmftbl.smt.solver.SmtSolver
-import de.moritzhank.cmftbl.smt.solver.misc.Logger
-import de.moritzhank.cmftbl.smt.solver.misc.MemoryProfiler
-import de.moritzhank.cmftbl.smt.solver.misc.avgWithoutInvalids
-import de.moritzhank.cmftbl.smt.solver.misc.getDateTimeString
+import de.moritzhank.cmftbl.smt.solver.misc.*
 import de.moritzhank.cmftbl.smt.solver.scripts.LegendPosition
 import de.moritzhank.cmftbl.smt.solver.scripts.linSpaceArr
 import de.moritzhank.cmftbl.smt.solver.scripts.plotPerf
@@ -81,7 +78,7 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     SmtSolver.CVC5,
     "QF_UF",
     1,
-    "#808080",
+    diagramColor(SmtSolver.CVC5),
     "CVC5 v$cvc5Version",
     runID,
     resTimeSLambda,
@@ -98,7 +95,7 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     SmtSolver.MATHSAT,
     "QF_UF",
     1,
-    "#44B7C2",
+    diagramColor(SmtSolver.MATHSAT),
     "MathSAT v$mathSATVersion",
     runID,
     resTimeSLambda,
@@ -115,7 +112,7 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     SmtSolver.Z3,
     "QF_UF",
     1,
-    "#034B7B",
+    diagramColor(SmtSolver.Z3),
     "Z3 v$z3Version",
     runID,
     resTimeSLambda,
@@ -132,7 +129,7 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     SmtSolver.YICES,
     "QF_UF",
     1,
-    "#44B7C2",
+    diagramColor(SmtSolver.YICES),
     "Yices v$yicesVersion",
     runID,
     resTimeSLambda,
