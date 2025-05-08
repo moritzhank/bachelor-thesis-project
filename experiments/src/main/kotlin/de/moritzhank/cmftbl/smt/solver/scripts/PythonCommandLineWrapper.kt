@@ -38,6 +38,7 @@ internal class PythonCommandLineWrapper {
 
     fun runScript(name: String, vararg args: String): Process {
       val scriptPath = ExperimentLoader.getPathToResource("/scripts/$name").absolutePathString()
+      println("Running \"${pythonBaseCmd()} $scriptPath ${args.joinToString(" ")}\"")
       return ProcessBuilder(pythonBaseCmd(), scriptPath, *args).start().apply { waitFor() }
     }
   }
