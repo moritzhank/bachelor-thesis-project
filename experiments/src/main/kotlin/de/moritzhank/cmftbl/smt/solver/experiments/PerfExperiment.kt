@@ -174,7 +174,7 @@ abstract class PerfExperiment<T: PerfExperimentSetup>(val name: String) {
       val r2 = resMaxSolverMemUsageGB(memoryStats.map { it.second })
       val row = "${setup.identifier}, $resultTimeCols, $resultMaxSysMemUsagePCols, $resultMaxSolverMemUsageBCols, $r1, $r2"
       val resultCSVFile = File(path)
-      resultCSVFile.appendText("row${System.lineSeparator()}")
+      resultCSVFile.appendText("$row${System.lineSeparator()}")
     } catch (e: Exception) {
       logger?.log("An error occurred during addition of a row to $path.")
       e.printStackTrace()

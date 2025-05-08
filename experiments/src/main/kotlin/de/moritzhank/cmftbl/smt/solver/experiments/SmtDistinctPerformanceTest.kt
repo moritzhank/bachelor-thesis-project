@@ -54,7 +54,8 @@ private class SmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout
 
 }
 
-fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? = null) {
+fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? = null, reps: Int) {
+  val repsAddition = if (reps > 1) " (avg. ${reps}x)" else ""
   val resMaxSolverMemUsageGBLambda: (List<Long>) -> String = { list ->
     val avg = list.avgWithoutInvalids()
     if (avg == -1L) "-1" else "${MemoryProfiler.bytesToGB(avg)}"
@@ -77,9 +78,9 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     rangeOfDistinctStatements,
     SmtSolver.CVC5,
     "QF_UF",
-    1,
+    reps,
     diagramColor(SmtSolver.CVC5),
-    "CVC5 v$cvc5Version",
+    "CVC5 v$cvc5Version$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
@@ -94,9 +95,9 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     rangeOfDistinctStatements,
     SmtSolver.MATHSAT,
     "QF_UF",
-    1,
+    reps,
     diagramColor(SmtSolver.MATHSAT),
-    "MathSAT v$mathSATVersion",
+    "MathSAT v$mathSATVersion$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
@@ -111,9 +112,9 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     rangeOfDistinctStatements,
     SmtSolver.Z3,
     "QF_UF",
-    1,
+    reps,
     diagramColor(SmtSolver.Z3),
-    "Z3 v$z3Version",
+    "Z3 v$z3Version$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
@@ -128,9 +129,9 @@ fun runSmtDistinctPerformanceTest(useMemProfiler: Boolean = true, timeout: Int? 
     rangeOfDistinctStatements,
     SmtSolver.YICES,
     "QF_UF",
-    1,
+    reps,
     diagramColor(SmtSolver.YICES),
-    "Yices v$yicesVersion",
+    "Yices v$yicesVersion$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda

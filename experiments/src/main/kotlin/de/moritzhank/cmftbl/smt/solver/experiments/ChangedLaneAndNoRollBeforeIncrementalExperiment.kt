@@ -69,7 +69,8 @@ private val changedLaneAndNoRollBefore = formula { v: CCB<Vehicle> ->
   }.apply { ccb.debugInfo = "l" }
 }
 
-fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int? = null, params: String) {
+fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true, timeout: Int? = null, reps: Int, params: String) {
+  val repsAddition = if (reps > 1) " (avg. ${reps}x)" else ""
   val params = params.split(" ")
   if (params.size != 4) {
     println("Für dieses Experiment werden die Parameter town, seed, segmentID und vehicleID benötigt.")
@@ -123,9 +124,9 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     listOfExperiments,
     SmtSolver.YICES,
     "QF_LIRA",
-    1,
+    reps,
     diagramColor(SmtSolver.YICES),
-    "Yices v$yicesVersion",
+    "Yices v$yicesVersion$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
@@ -140,9 +141,9 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     listOfExperiments,
     SmtSolver.MATHSAT,
     "QF_LIRA",
-    1,
+    reps,
     diagramColor(SmtSolver.MATHSAT),
-    "MathSAT v$mathSATVersion",
+    "MathSAT v$mathSATVersion$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
@@ -157,9 +158,9 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     listOfExperiments,
     SmtSolver.Z3,
     "QF_LIRA",
-    1,
+    reps,
     diagramColor(SmtSolver.Z3),
-    "Z3 v$z3Version",
+    "Z3 v$z3Version$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
@@ -174,9 +175,9 @@ fun runChangedLaneAndNoRollBeforeIncrementalTest(useMemProfiler: Boolean = true,
     listOfExperiments,
     SmtSolver.CVC5,
     "QF_LIRA",
-    1,
+    reps,
     diagramColor(SmtSolver.CVC5),
-    "CVC5 v$cvc5Version",
+    "CVC5 v$cvc5Version$repsAddition",
     runID,
     resTimeSLambda,
     resMaxSolverMemUsageGBLambda
